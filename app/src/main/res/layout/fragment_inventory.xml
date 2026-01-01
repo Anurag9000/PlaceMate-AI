@@ -27,21 +27,21 @@
 
     <ImageButton
         android:id="@+id/btn_speech_search"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_marginEnd="8dp"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginEnd="4dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="Speech Search"
         android:src="@android:drawable/ic_btn_speak_now"
         app:layout_constraintBottom_toBottomOf="@id/search_layout"
-        app:layout_constraintEnd_toStartOf="@id/btn_visual_search"
+        app:layout_constraintEnd_toStartOf="@id/btn_scene_scan"
         app:layout_constraintTop_toTopOf="@id/search_layout" />
 
     <ImageButton
         android:id="@+id/btn_scene_scan"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_marginEnd="8dp"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginEnd="4dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="Room Scene Scan"
         android:src="@android:drawable/ic_menu_view"
@@ -51,9 +51,9 @@
 
     <ImageButton
         android:id="@+id/btn_visual_search"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:layout_marginEnd="8dp"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginEnd="4dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="Visual Search"
         android:src="@android:drawable/ic_menu_camera"
@@ -63,8 +63,8 @@
 
     <ImageButton
         android:id="@+id/btn_clear_data"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
         android:layout_marginEnd="16dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="Clear All Data"
