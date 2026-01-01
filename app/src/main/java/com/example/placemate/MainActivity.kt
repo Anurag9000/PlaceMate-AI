@@ -27,11 +27,6 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
         setSupportActionBar(binding.appBarMain.toolbar)
 
-        // Remove FAB from MainActivity if not used globally, or update it
-        binding.appBarMain.fab?.setOnClickListener { view ->
-             val navController = (supportFragmentManager.findFragmentById(R.id.nav_host_fragment_content_main) as NavHostFragment).navController
-             navController.navigate(R.id.nav_add_item)
-        }
 
         val navHostFragment =
             (supportFragmentManager.findFragmentById(R.id.nav_host_fragment_content_main) as NavHostFragment?)!!

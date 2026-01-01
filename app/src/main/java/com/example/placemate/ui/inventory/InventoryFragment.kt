@@ -116,6 +116,11 @@ class InventoryFragment : Fragment() {
                 }
             }
         }
+
+        arguments?.getString("searchQuery")?.let { query ->
+            binding.searchEditText.setText(query)
+            viewModel.updateSearchQuery(query)
+        }
     }
 
     private fun startVisualSearch() {
