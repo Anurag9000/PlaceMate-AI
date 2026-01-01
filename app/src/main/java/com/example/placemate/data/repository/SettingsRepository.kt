@@ -16,7 +16,8 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 
 @Singleton
 class SettingsRepository @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val configManager: com.example.placemate.core.utils.ConfigManager
 ) {
     private val CADENCE_HOURS = intPreferencesKey("reminder_cadence_hours")
 
@@ -28,5 +29,11 @@ class SettingsRepository @Inject constructor(
         context.dataStore.edit { preferences ->
             preferences[CADENCE_HOURS] = hours
         }
+    }
+
+    fun getGeminiApiKey(): String? = configManager.getGeminiApiKey()
+
+    fun updateGeminiApiKey(key: String) {
+        configManager.saveGeminiApiKey(key)
     }
 }

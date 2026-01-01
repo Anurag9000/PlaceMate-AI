@@ -22,7 +22,8 @@ import com.example.placemate.data.local.entities.ItemPlacementEntity
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class InventoryViewModel @Inject constructor(
-    private val repository: InventoryRepository
+    private val repository: com.example.placemate.data.repository.InventoryRepository,
+    private val categoryManager: com.example.placemate.core.utils.CategoryManager
 ) : ViewModel() {
 // ... existing items flow ...
 
@@ -70,7 +71,7 @@ class InventoryViewModel @Inject constructor(
                 
                 val itemEntity = ItemEntity(
                     name = item.label,
-                    category = "Household", // Will be editable later
+                    category = categoryManager.mapLabelToCategory(item.label),
                     description = "Detected in ${parentLocation.name}",
                     photoUri = croppedUri?.toString()
                 )

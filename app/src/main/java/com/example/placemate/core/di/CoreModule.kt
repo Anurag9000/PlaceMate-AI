@@ -4,26 +4,43 @@ import com.example.placemate.core.input.InputInterpreter
 import com.example.placemate.core.input.StubInputInterpreter
 import com.example.placemate.core.input.MLKitRecognitionService
 import com.example.placemate.core.input.ItemRecognitionService
-import dagger.Binds
-
+import com.example.placemate.core.input.GeminiRecognitionService
+import com.example.placemate.core.utils.ConfigManager
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class CoreModule {
+object CoreModule {
 
-    @Binds
+    @Provides
     @Singleton
-    abstract fun bindInputInterpreter(
+    fun provideInputInterpreter(
         stubInputInterpreter: StubInputInterpreter
-    ): InputInterpreter
+    ): InputInterpreter = stubInputInterpreter
 
-    @Binds
+    @Provides
     @Singleton
-    abstract fun bindItemRecognitionService(
-        service: MLKitRecognitionService
-    ): ItemRecognitionService
+    fun provideItemRecognitionService(
+        configManager: ConfigManager,
+        geminiService: GeminiRecognitionService,
+        mlKitService: MLKitRecognitionService
+    ): ItemRecognitionService {
+        return object : ItemRecognitionService {
+            private fun getActiveService(): ItemRecognitionService {
+                return if (configManager.hasGeminiApiKey()) geminiService else mlKitService
+            }
+
+            override suspend fun recognizeItem(imageUri: android.net.Uri): com.example.placemate.core.input.RecognitionResult {
+                return getActiveService().recognizeItem(imageUri)
+            }
+
+            override suspend fun recognizeScene(imageUri: android.net.Uri): com.example.placemate.core.input.SceneRecognitionResult {
+                return getActiveService().recognizeScene(imageUri)
+            }
+        }
+    }
 }

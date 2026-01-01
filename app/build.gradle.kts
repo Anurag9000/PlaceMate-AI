@@ -74,6 +74,12 @@ dependencies {
     ksp(libs.androidx.hilt.compiler)
     implementation(libs.play.services.coroutines)
 
+    // Gemini AI
+    implementation(libs.generative.ai)
+
+    // Security
+    implementation(libs.androidx.security.crypto)
+
 
 
     testImplementation(libs.junit)

@@ -32,6 +32,10 @@ class SettingsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Load existing settings
+        val currentApiKey = settingsRepository.getGeminiApiKey()
+        binding.editApiKey.setText(currentApiKey)
+
         viewLifecycleOwner.lifecycleScope.launch {
             settingsRepository.reminderCadenceHours.collect { hours ->
                 binding.cadenceSlider.value = hours.toFloat()
@@ -39,13 +43,20 @@ class SettingsFragment : Fragment() {
             }
         }
 
+        binding.textGetKeyLink.setOnClickListener {
+            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://aistudio.google.com/"))
+            startActivity(intent)
+        }
+
         binding.cadenceSlider.addOnChangeListener { _, value, _ ->
             binding.textCadenceValue.text = "${value.toInt()} hours"
         }
 
         binding.btnSaveSettings.setOnClickListener {
+            val apiKey = binding.editApiKey.text?.toString() ?: ""
             viewLifecycleOwner.lifecycleScope.launch {
                 settingsRepository.updateReminderCadence(binding.cadenceSlider.value.toInt())
+                settingsRepository.updateGeminiApiKey(apiKey)
                 Toast.makeText(requireContext(), "Settings saved!", Toast.LENGTH_SHORT).show()
             }
         }

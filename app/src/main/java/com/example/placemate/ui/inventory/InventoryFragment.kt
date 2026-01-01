@@ -37,6 +37,9 @@ class InventoryFragment : Fragment() {
     @javax.inject.Inject
     lateinit var synonymManager: com.example.placemate.core.utils.SynonymManager
 
+    @javax.inject.Inject
+    lateinit var categoryManager: com.example.placemate.core.utils.CategoryManager
+
     private var photoFile: File? = null
     private var pendingIsScene: Boolean = false
 
@@ -165,6 +168,20 @@ class InventoryFragment : Fragment() {
             binding.searchEditText.setText(query)
             viewModel.updateSearchQuery(query)
         }
+
+        val menuHost: androidx.core.view.MenuHost = requireActivity()
+        menuHost.addMenuProvider(object : androidx.core.view.MenuProvider {
+            override fun onCreateMenu(menu: android.view.Menu, menuInflater: android.view.MenuInflater) {
+                menuInflater.inflate(R.menu.overflow, menu)
+            }
+
+            override fun onMenuItemSelected(menuItem: android.view.MenuItem): Boolean {
+                return if (menuItem.itemId == R.id.nav_settings) {
+                    findNavController().navigate(R.id.nav_settings)
+                    true
+                } else false
+            }
+        }, viewLifecycleOwner, Lifecycle.State.RESUMED)
     }
 
     private fun showContainerDetectionDialog(result: com.example.placemate.core.input.RecognitionResult) {

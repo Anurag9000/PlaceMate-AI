@@ -18,7 +18,8 @@ import com.google.mlkit.vision.objects.DetectedObject
 @Singleton
 class MLKitRecognitionService @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val synonymManager: com.example.placemate.core.utils.SynonymManager
+    private val synonymManager: com.example.placemate.core.utils.SynonymManager,
+    private val categoryManager: com.example.placemate.core.utils.CategoryManager
 ) : ItemRecognitionService {
 
     private val labeler = ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS)
@@ -50,9 +51,9 @@ class MLKitRecognitionService @Inject constructor(
             val normalizedLabel = synonymManager.getRepresentativeName(bestLabelText)
             RecognitionResult(
                 suggestedName = normalizedLabel.replaceFirstChar { it.uppercase() },
-                suggestedCategory = mapLabelToCategory(normalizedLabel),
+                suggestedCategory = categoryManager.mapLabelToCategory(normalizedLabel),
                 confidence = labels.firstOrNull()?.confidence ?: 0f,
-                isContainer = isLabelContainer(normalizedLabel)
+                isContainer = categoryManager.isLabelContainer(normalizedLabel)
             )
         } catch (e: Exception) {
             RecognitionResult(null, null, 0f)
@@ -84,7 +85,7 @@ class MLKitRecognitionService @Inject constructor(
                 val normalized = synonymManager.getRepresentativeName(labelText)
                 recognized.add(RecognizedObject(
                     label = normalized.replaceFirstChar { it.uppercase() },
-                    isContainer = isLabelContainer(normalized),
+                    isContainer = categoryManager.isLabelContainer(normalized),
                     confidence = obj.labels.firstOrNull()?.confidence ?: 0.5f,
                     boundingBox = obj.boundingBox
                 ))
@@ -93,37 +94,5 @@ class MLKitRecognitionService @Inject constructor(
         } catch (e: Exception) {
             SceneRecognitionResult(emptyList())
         }
-    }
-
-    private fun mapLabelToCategory(label: String): String {
-        val lower = label.lowercase()
-        return when {
-            lower.contains("tool") || lower.contains("hammer") || lower.contains("screw") -> "Tools"
-            lower.contains("book") || lower.contains("paper") || lower.contains("magazine") -> "Media"
-            lower.contains("electronics") || lower.contains("phone") || lower.contains("laptop") || lower.contains("computer") -> "Electronics"
-            lower.contains("furniture") || lower.contains("chair") || lower.contains("table") || lower.contains("desk") || lower.contains("sofa") -> "Furniture"
-            lower.contains("kitchen") || lower.contains("cook") || lower.contains("food") || lower.contains("appliance") -> "Kitchen"
-            lower.contains("toy") || lower.contains("game") -> "Leisure"
-            lower.contains("clothing") || lower.contains("wear") || lower.contains("shoe") -> "Apparel"
-            else -> "Decor & Misc"
-        }
-    }
-
-    private fun isLabelContainer(label: String): Boolean {
-        val lower = label.lowercase()
-        return lower.contains("shelf") || 
-               lower.contains("bookcase") ||
-               lower.contains("cupboard") || 
-               lower.contains("wardrobe") || 
-               lower.contains("almirah") ||
-               lower.contains("rack") ||
-               lower.contains("drawer") ||
-               lower.contains("fridge") || 
-               lower.contains("refrigerator") || 
-               lower.contains("table") || 
-               lower.contains("desk") ||
-               lower.contains("box") ||
-               lower.contains("cabinet") ||
-               lower.contains("storage")
     }
 }
