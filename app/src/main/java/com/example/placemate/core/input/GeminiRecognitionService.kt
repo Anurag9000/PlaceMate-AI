@@ -32,7 +32,16 @@ class GeminiRecognitionService @Inject constructor(
         )
     }
 
+
+    private fun isOnline(): Boolean {
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        val network = connectivityManager.activeNetwork ?: return false
+        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+        return capabilities.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
+
     override suspend fun recognizeItem(imageUri: Uri): RecognitionResult = withContext(Dispatchers.IO) {
+        if (!isOnline()) return@withContext RecognitionResult(null, null, 0f)
         val model = getModel() ?: return@withContext RecognitionResult(null, null, 0f)
         
         try {
@@ -41,14 +50,10 @@ class GeminiRecognitionService @Inject constructor(
             val prompt = """
                 Analyze this image of a single object. 
                 Identify the item and provide a suggested name and its broad category.
-                Also determine if this object is a container (like a shelf, box, or cabinet) that could hold other items.
-                Return ONLY a JSON object in this format:
-                {
-                  "name": "string",
-                  "category": "string",
-                  "isContainer": boolean,
-                  "confidence": float
-                }
+                Also determine if this object is a container (like a shelf, box, or cabinet).
+                Return ONLY a JSON object:
+                {"name": "string", "category": "string", "isContainer": boolean, "confidence": float}
+                If nothing is found, return {"name": "Unknown", "category": "Misc", "isContainer": false, "confidence": 0.0}
             """.trimIndent()
 
             val response = model.generateContent(content {
@@ -56,24 +61,28 @@ class GeminiRecognitionService @Inject constructor(
                 text(prompt)
             })
 
-            val jsonStr = response.text?.replace("```json", "")?.replace("```", "")?.trim() ?: ""
+            val text = response.text ?: ""
+            val jsonStr = extractJson(text)
+            if (jsonStr.isEmpty()) return@withContext RecognitionResult("Unknown", "Misc", 0f)
+
             val json = JSONObject(jsonStr)
-            
-            val name = json.optString("name")
+            val name = json.optString("name", "Unknown")
             val normalized = synonymManager.getRepresentativeName(name)
             
             RecognitionResult(
                 suggestedName = normalized.replaceFirstChar { it.uppercase() },
                 suggestedCategory = categoryManager.mapLabelToCategory(normalized),
-                confidence = json.optDouble("confidence", 0.9).toFloat(),
+                confidence = json.optDouble("confidence", 0.0).toFloat(),
                 isContainer = categoryManager.isLabelContainer(normalized)
             )
         } catch (e: Exception) {
+            android.util.Log.e("GeminiService", "Item recognition failed", e)
             RecognitionResult(null, null, 0f)
         }
     }
 
     override suspend fun recognizeScene(imageUri: Uri): SceneRecognitionResult = withContext(Dispatchers.IO) {
+        if (!isOnline()) return@withContext SceneRecognitionResult(emptyList())
         val model = getModel() ?: return@withContext SceneRecognitionResult(emptyList())
 
         try {
@@ -82,22 +91,12 @@ class GeminiRecognitionService @Inject constructor(
             val height = bitmap.height
 
             val prompt = """
-                Extract ALL entities visible in this photo of a room or storage area. 
-                Be EXHAUSTIVE. If there are 50 books, list them individually if possible, or provide a count.
-                Identify the hierarchical relationship: what is "in" or "on" what.
+                Extract ALL entities in this room/storage area. Hierarchize them.
+                1. Identify the Room.
+                2. Identify Furniture/Storage.
+                3. Identify smaller items on/in them.
                 
-                1. Identify the Room (e.g., "Living Room").
-                2. Identify all Furniture and Storage (e.g., "Dining Table", "Sofa", "Bookshelf", "Drawer").
-                3. Identify all smaller items on/in those objects (e.g., "Laptop", "Coffee Mug", "Book: The Great Gatsby").
-                
-                For each object, provide:
-                - label: Descriptive name.
-                - isContainer: True if it can hold other things.
-                - quantity: Number of such items if grouped (default 1).
-                - parentLabel: The name of the object it is sitting ON or INSIDE (e.g., "Dining Table", "Shelf"). Use the Room name as the ultimate parent.
-                - box_2d: [ymin, xmin, ymax, xmax] in normalized coordinates (0-1000).
-                
-                Return ONLY a JSON object:
+                Format as JSON:
                 {
                   "objects": [
                     {
@@ -106,10 +105,11 @@ class GeminiRecognitionService @Inject constructor(
                       "confidence": float,
                       "quantity": number,
                       "parentLabel": "string",
-                      "box_2d": [number, number, number, number]
+                      "box_2d": [ymin, xmin, ymax, xmax] 
                     }
                   ]
                 }
+                Use coordinates 0-1000. If no items, return {"objects": []}.
             """.trimIndent()
 
             val response = model.generateContent(content {
@@ -117,14 +117,17 @@ class GeminiRecognitionService @Inject constructor(
                 text(prompt)
             })
 
-            val jsonStr = response.text?.replace("```json", "")?.replace("```", "")?.trim() ?: ""
+            val text = response.text ?: ""
+            val jsonStr = extractJson(text)
+            if (jsonStr.isEmpty()) return@withContext SceneRecognitionResult(emptyList())
+
             val json = JSONObject(jsonStr)
-            val jsonArray = json.getJSONArray("objects")
+            val jsonArray = json.optJSONArray("objects") ?: return@withContext SceneRecognitionResult(emptyList())
             
             val recognized = mutableListOf<RecognizedObject>()
             for (i in 0 until jsonArray.length()) {
                 val obj = jsonArray.getJSONObject(i)
-                val label = obj.getString("label")
+                val label = obj.optString("label", "Unknown")
                 val normalized = synonymManager.getRepresentativeName(label)
                 
                 val boxArray = obj.optJSONArray("box_2d")
@@ -139,7 +142,7 @@ class GeminiRecognitionService @Inject constructor(
                 recognized.add(RecognizedObject(
                     label = normalized.replaceFirstChar { it.uppercase() },
                     isContainer = categoryManager.isLabelContainer(normalized),
-                    confidence = obj.optDouble("confidence", 0.8).toFloat(),
+                    confidence = obj.optDouble("confidence", 0.0).toFloat(),
                     boundingBox = rect,
                     quantity = obj.optInt("quantity", 1),
                     parentLabel = obj.optString("parentLabel").takeIf { it.isNotEmpty() }
@@ -147,8 +150,17 @@ class GeminiRecognitionService @Inject constructor(
             }
             SceneRecognitionResult(recognized)
         } catch (e: Exception) {
+            android.util.Log.e("GeminiService", "Scene recognition failed", e)
             SceneRecognitionResult(emptyList())
         }
+    }
+
+    private fun extractJson(text: String): String {
+        val start = text.indexOf("{")
+        val end = text.lastIndexOf("}")
+        return if (start != -1 && end != -1 && end > start) {
+            text.substring(start, end + 1)
+        } else ""
     }
 
     private fun loadBitmap(uri: Uri): Bitmap? {

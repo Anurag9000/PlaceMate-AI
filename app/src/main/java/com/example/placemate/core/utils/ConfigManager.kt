@@ -33,7 +33,16 @@ class ConfigManager @Inject constructor(
         return !getGeminiApiKey().isNullOrBlank()
     }
 
+    fun setUseGemini(enabled: Boolean) {
+        sharedPreferences.edit().putBoolean(KEY_USE_GEMINI, enabled).apply()
+    }
+
+    fun isGeminiEnabled(): Boolean {
+        return sharedPreferences.getBoolean(KEY_USE_GEMINI, false)
+    }
+
     companion object {
         private const val KEY_GEMINI_API_KEY = "gemini_api_key"
+        private const val KEY_USE_GEMINI = "use_gemini"
     }
 }

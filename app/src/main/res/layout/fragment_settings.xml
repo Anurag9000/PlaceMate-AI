@@ -33,6 +33,21 @@
             android:textColor="?attr/colorPrimary"
             android:textAppearance="?attr/textAppearanceBody2" />
 
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switch_use_gemini"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Use Gemini 1.5 Flash (AI Studio)"
+            android:textAppearance="?attr/textAppearanceSubtitle1" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Enable for exhaustive hierarchical scanning. Requires internet and an API key."
+            android:textAppearance="?attr/textAppearanceCaption"
+            android:textColor="@color/text_muted" />
+
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/layout_api_key"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"

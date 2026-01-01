@@ -52,11 +52,27 @@ class SettingsFragment : Fragment() {
             binding.textCadenceValue.text = "${value.toInt()} hours"
         }
 
+        // Toggle state
+        binding.switchUseGemini.isChecked = settingsRepository.isGeminiEnabled()
+        binding.layoutApiKey.isEnabled = binding.switchUseGemini.isChecked
+
+        binding.switchUseGemini.setOnCheckedChangeListener { _, isChecked ->
+            binding.layoutApiKey.isEnabled = isChecked
+        }
+
         binding.btnSaveSettings.setOnClickListener {
             val apiKey = binding.editApiKey.text?.toString() ?: ""
+            val useGemini = binding.switchUseGemini.isChecked
+            
+            if (useGemini && apiKey.isBlank()) {
+                Toast.makeText(requireContext(), "Please enter a Gemini API Key to enable it.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
             viewLifecycleOwner.lifecycleScope.launch {
                 settingsRepository.updateReminderCadence(binding.cadenceSlider.value.toInt())
                 settingsRepository.updateGeminiApiKey(apiKey)
+                settingsRepository.setUseGemini(useGemini)
                 Toast.makeText(requireContext(), "Settings saved!", Toast.LENGTH_SHORT).show()
             }
         }

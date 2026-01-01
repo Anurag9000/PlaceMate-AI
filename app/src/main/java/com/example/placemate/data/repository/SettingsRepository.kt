@@ -36,4 +36,10 @@ class SettingsRepository @Inject constructor(
     fun updateGeminiApiKey(key: String) {
         configManager.saveGeminiApiKey(key)
     }
+
+    fun isGeminiEnabled(): Boolean = configManager.isGeminiEnabled()
+
+    fun setUseGemini(enabled: Boolean) {
+        configManager.setUseGemini(enabled)
+    }
 }

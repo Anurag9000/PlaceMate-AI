@@ -18,7 +18,7 @@ class HomeViewModel @Inject constructor(
     private val configManager: ConfigManager
 ) : ViewModel() {
 
-    val aiEngineStatus: String = if (configManager.hasGeminiApiKey()) "Gemini 1.5 Flash" else "Basic (ML Kit)"
+    val aiEngineStatus: String = if (configManager.isGeminiEnabled() && configManager.hasGeminiApiKey()) "Gemini 1.5 Flash" else "Basic (ML Kit)"
 
     val totalItemsCount: StateFlow<Int> = repository.getAllItems()
         .map { it.size }

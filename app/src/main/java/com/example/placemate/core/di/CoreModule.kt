@@ -31,7 +31,11 @@ object CoreModule {
     ): ItemRecognitionService {
         return object : ItemRecognitionService {
             private fun getActiveService(): ItemRecognitionService {
-                return if (configManager.hasGeminiApiKey()) geminiService else mlKitService
+                return if (configManager.isGeminiEnabled() && configManager.hasGeminiApiKey()) {
+                    geminiService
+                } else {
+                    mlKitService
+                }
             }
 
             override suspend fun recognizeItem(imageUri: android.net.Uri): com.example.placemate.core.input.RecognitionResult {
