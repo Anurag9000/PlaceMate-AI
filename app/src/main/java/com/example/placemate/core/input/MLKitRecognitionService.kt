@@ -30,24 +30,30 @@ class MLKitRecognitionService @Inject constructor(
             .build()
     )
 
+    private val genericLabels = setOf("home good", "furniture", "building", "rectangle", "shape", "material", "object", "product")
+
+    private fun getSpecificLabel(labels: List<com.google.mlkit.vision.objects.DetectedObject.Label>): String {
+        // Find first label that isn't in genericLabels
+        val best = labels.find { !genericLabels.contains(it.text.lowercase()) }?.text
+            ?: labels.firstOrNull()?.text ?: "Object"
+        return best
+    }
+
     override suspend fun recognizeItem(imageUri: Uri): RecognitionResult {
         return try {
             val image = InputImage.fromFilePath(context, imageUri)
             val labels: List<ImageLabel> = labeler.process(image).await()
             
-            if (labels.isNotEmpty()) {
-                val bestLabel = labels[0]
-                val normalizedLabel = synonymManager.getRepresentativeName(bestLabel.text)
-                RecognitionResult(
-                    suggestedName = normalizedLabel.replaceFirstChar { it.uppercase() },
-                    suggestedCategory = mapLabelToCategory(normalizedLabel),
-                    confidence = bestLabel.confidence,
-                    isContainer = isLabelContainer(normalizedLabel)
-                )
-
-            } else {
-                RecognitionResult(null, null, 0f)
-            }
+            val specificLabels = labels.filter { !genericLabels.contains(it.text.lowercase()) }
+            val bestLabelText = specificLabels.firstOrNull()?.text ?: labels.firstOrNull()?.text ?: "Item"
+            
+            val normalizedLabel = synonymManager.getRepresentativeName(bestLabelText)
+            RecognitionResult(
+                suggestedName = normalizedLabel.replaceFirstChar { it.uppercase() },
+                suggestedCategory = mapLabelToCategory(normalizedLabel),
+                confidence = labels.firstOrNull()?.confidence ?: 0f,
+                isContainer = isLabelContainer(normalizedLabel)
+            )
         } catch (e: Exception) {
             RecognitionResult(null, null, 0f)
         }
@@ -57,26 +63,25 @@ class MLKitRecognitionService @Inject constructor(
         return try {
             val image = InputImage.fromFilePath(context, imageUri)
             
-            // 1. Get Scene Context (e.g. "Living Room") via Labeler
+            // 1. Get Scene Context
             val labels = labeler.process(image).await()
             val sceneContext = labels.find { label ->
                 val text = label.text.lowercase()
                 text.contains("room") || text.contains("kitchen") || text.contains("office") || text.contains("garage")
             }?.text?.replaceFirstChar { it.uppercase() }
 
-            // 2. Get Specific Objects via Detector
+            // 2. Get Specific Objects
             val detectedObjects: List<DetectedObject> = objectDetector.process(image).await()
             
             val recognized = mutableListOf<RecognizedObject>()
             
-            // Add the scene context if found as a container
             sceneContext?.let {
-                recognized.add(RecognizedObject(it, true, 0.9f)) // Treat room as root container
+                recognized.add(RecognizedObject(it, true, 0.9f))
             }
 
             for (obj in detectedObjects) {
-                val label = obj.labels.firstOrNull()?.text ?: "Object"
-                val normalized = synonymManager.getRepresentativeName(label)
+                val labelText = getSpecificLabel(obj.labels)
+                val normalized = synonymManager.getRepresentativeName(labelText)
                 recognized.add(RecognizedObject(
                     label = normalized.replaceFirstChar { it.uppercase() },
                     isContainer = isLabelContainer(normalized),
@@ -91,12 +96,16 @@ class MLKitRecognitionService @Inject constructor(
     }
 
     private fun mapLabelToCategory(label: String): String {
-        return when (label.lowercase()) {
-            "tool", "screwdriver", "hammer" -> "Tools"
-            "book", "paper" -> "Media"
-            "furniture", "chair", "table" -> "Furniture"
-            "electronics", "gadget", "phone" -> "Electronics"
-            else -> "Household"
+        val lower = label.lowercase()
+        return when {
+            lower.contains("tool") || lower.contains("hammer") || lower.contains("screw") -> "Tools"
+            lower.contains("book") || lower.contains("paper") || lower.contains("magazine") -> "Media"
+            lower.contains("electronics") || lower.contains("phone") || lower.contains("laptop") || lower.contains("computer") -> "Electronics"
+            lower.contains("furniture") || lower.contains("chair") || lower.contains("table") || lower.contains("desk") || lower.contains("sofa") -> "Furniture"
+            lower.contains("kitchen") || lower.contains("cook") || lower.contains("food") || lower.contains("appliance") -> "Kitchen"
+            lower.contains("toy") || lower.contains("game") -> "Leisure"
+            lower.contains("clothing") || lower.contains("wear") || lower.contains("shoe") -> "Apparel"
+            else -> "Decor & Misc"
         }
     }
 
@@ -114,6 +123,7 @@ class MLKitRecognitionService @Inject constructor(
                lower.contains("table") || 
                lower.contains("desk") ||
                lower.contains("box") ||
-               lower.contains("cabinet")
+               lower.contains("cabinet") ||
+               lower.contains("storage")
     }
 }

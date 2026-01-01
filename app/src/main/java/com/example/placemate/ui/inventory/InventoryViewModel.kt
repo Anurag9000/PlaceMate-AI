@@ -26,12 +26,12 @@ class InventoryViewModel @Inject constructor(
 ) : ViewModel() {
 // ... existing items flow ...
 
-    fun syncScene(result: SceneRecognitionResult) {
+    fun syncScene(context: android.content.Context, result: SceneRecognitionResult, imageUri: android.net.Uri) {
         viewModelScope.launch {
             val objects = result.objects
             if (objects.isEmpty()) return@launch
 
-            // 1. Identify valid room/root if any. Default to "New Room" if none found.
+            // 1. Identify valid room/root
             val roomLabel = objects.find { 
                 val l = it.label.lowercase()
                 l.contains("room") || l.contains("kitchen") || l.contains("office") || l.contains("bedroom")
@@ -41,7 +41,7 @@ class InventoryViewModel @Inject constructor(
             val parentLocation = currentLocations?.find { it.name.equals(roomLabel, true) }
                 ?: repository.addLocationSync(roomLabel, LocationType.ROOM, null)
 
-            // 2. Identify containers (Shelves, Tables, Almirahs)
+            // 2. Identify containers
             val containerObjects = objects.filter { it.isContainer && it.label != roomLabel }
             val containerMap = containerObjects.map { cont ->
                 val entity = currentLocations?.find { it.name.equals(cont.label, true) && it.parentId == parentLocation.id }
@@ -49,10 +49,9 @@ class InventoryViewModel @Inject constructor(
                 cont to entity
             }
 
-            // 3. Identify items and place them in the correct spatial container
+            // 3. Identify items and place them spatially
             val items = objects.filter { !it.isContainer && !it.label.contains("Room", true) }
             items.forEach { item ->
-                // Find the best container by spatial containment
                 val targetLocation = item.boundingBox?.let { itemRect ->
                     val centerX = itemRect.centerX()
                     val centerY = itemRect.centerY()
@@ -60,17 +59,20 @@ class InventoryViewModel @Inject constructor(
                     containerMap.filter { (contObj, _) ->
                         contObj.boundingBox?.contains(centerX, centerY) == true
                     }.minByOrNull { (contObj, _) -> 
-                        // Pick the smallest containing box (most specific)
                         val r = contObj.boundingBox!!
                         r.width() * r.height()
                     }?.second
                 } ?: parentLocation
+
+                val croppedUri = item.boundingBox?.let { 
+                    com.example.placemate.core.utils.ImageUtils.cropAndSave(context, imageUri, it)
+                }
                 
                 val itemEntity = ItemEntity(
                     name = item.label,
-                    category = "Detected",
+                    category = "Household", // Will be editable later
                     description = "Detected in ${parentLocation.name}",
-                    photoUri = null
+                    photoUri = croppedUri?.toString()
                 )
                 repository.saveItem(itemEntity, targetLocation.id)
             }

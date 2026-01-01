@@ -86,7 +86,7 @@ class InventoryFragment : Fragment() {
                     val sceneResult = recognitionService.recognizeScene(uri)
                     
                     if (sceneResult.objects.isNotEmpty()) {
-                        viewModel.syncScene(sceneResult)
+                        viewModel.syncScene(requireContext(), sceneResult, uri)
                         android.widget.Toast.makeText(requireContext(), 
                             "Scene scanned! Created Room and found ${sceneResult.objects.count { !it.isContainer }} items.", 
                             android.widget.Toast.LENGTH_LONG).show()
@@ -96,9 +96,9 @@ class InventoryFragment : Fragment() {
                             .setTitle("No Objects Detected")
                             .setMessage("I couldn't identify specific objects. Do you want to add this photo as a generic 'New Room'?")
                             .setPositiveButton("Add Room") { _, _ ->
-                                viewModel.syncScene(com.example.placemate.core.input.SceneRecognitionResult(
+                                viewModel.syncScene(requireContext(), com.example.placemate.core.input.SceneRecognitionResult(
                                     listOf(com.example.placemate.core.input.RecognizedObject("New Scanned Room", true, 1.0f))
-                                ))
+                                ), uri)
                             }
                             .setNegativeButton("Cancel", null)
                             .show()

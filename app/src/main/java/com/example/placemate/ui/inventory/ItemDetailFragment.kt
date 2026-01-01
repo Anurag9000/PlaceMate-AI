@@ -33,6 +33,21 @@ class ItemDetailFragment : Fragment() {
         return binding.root
     }
 
+    private var photoFile: java.io.File? = null
+    private val takePictureLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            photoFile?.let { file ->
+                val uri = android.net.Uri.fromFile(file)
+                binding.itemDetailImage.setImageURI(uri)
+                // We'll save the URI when they click "Save"
+                tempPhotoUri = uri.toString()
+            }
+        }
+    }
+    private var tempPhotoUri: String? = null
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -60,29 +75,54 @@ class ItemDetailFragment : Fragment() {
                 .show()
         }
 
+        binding.btnSave.setOnClickListener {
+            val name = binding.editItemName.text?.toString() ?: ""
+            val category = binding.editItemCategory.text?.toString() ?: ""
+            val notes = binding.editItemNotes.text?.toString()
+            viewModel.updateItemDetails(name, category, notes, tempPhotoUri)
+            android.widget.Toast.makeText(requireContext(), "Item updated!", android.widget.Toast.LENGTH_SHORT).show()
+        }
+
+        binding.fabEditImage.setOnClickListener {
+            photoFile = com.example.placemate.core.utils.ImageUtils.createImageFile(requireContext())
+            val uri = com.example.placemate.core.utils.ImageUtils.getContentUri(requireContext(), photoFile!!)
+            takePictureLauncher.launch(uri)
+        }
+
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
                     viewModel.item.collect { item ->
                         item?.let {
-                            binding.textItemName.text = it.name
-                            binding.textItemCategory.text = "Category: ${it.category}"
-                            binding.textItemNotes.text = it.description
+                            if (binding.editItemName.text.isNullOrEmpty()) {
+                                binding.editItemName.setText(it.name)
+                            }
+                            if (binding.editItemCategory.text.isNullOrEmpty()) {
+                                binding.editItemCategory.setText(it.category)
+                            }
+                            if (binding.editItemNotes.text.isNullOrEmpty()) {
+                                binding.editItemNotes.setText(it.description)
+                            }
+                            
                             binding.textItemStatus.text = it.status.name
                             
+                            if (!it.photoUri.isNullOrEmpty()) {
+                                binding.itemDetailImage.setImageURI(android.net.Uri.parse(it.photoUri))
+                            }
+
                             if (it.status == ItemStatus.PRESENT) {
                                 binding.btnAction.text = getString(R.string.btn_mark_taken)
-                                binding.textItemStatus.setBackgroundResource(android.R.drawable.presence_online)
+                                binding.textItemStatus.setBackgroundColor(android.graphics.Color.parseColor("#4CAF50"))
                             } else {
                                 binding.btnAction.text = getString(R.string.btn_mark_returned)
-                                binding.textItemStatus.setBackgroundResource(android.R.drawable.presence_away)
+                                binding.textItemStatus.setBackgroundColor(android.graphics.Color.parseColor("#F44336"))
                             }
                         }
                     }
                 }
                 launch {
                     viewModel.locationPath.collect { path ->
-                        binding.textItemLocation.text = path ?: "Unknown Location"
+                        binding.textItemLocation.text = "Location: ${path ?: "Unknown"}"
                     }
                 }
             }

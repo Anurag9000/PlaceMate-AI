@@ -79,4 +79,19 @@ class ItemDetailViewModel @Inject constructor(
             _item.value = null
         }
     }
+
+    fun updateItemDetails(name: String, category: String, description: String?, photoUri: String?) {
+        val currentItem = _item.value ?: return
+        viewModelScope.launch {
+            val updatedItem = currentItem.copy(
+                name = name,
+                category = category,
+                description = description,
+                photoUri = photoUri ?: currentItem.photoUri,
+                updatedAt = System.currentTimeMillis()
+            )
+            inventoryRepository.saveItem(updatedItem)
+            _item.value = updatedItem
+        }
+    }
 }

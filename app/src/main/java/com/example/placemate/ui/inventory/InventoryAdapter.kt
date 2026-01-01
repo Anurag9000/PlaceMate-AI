@@ -39,7 +39,13 @@ class InventoryAdapter(
             binding.itemName.text = if (uiModel.count > 1) "${item.name} (x${uiModel.count})" else item.name
             binding.itemCategory.text = item.category
             binding.itemStatus.text = item.status.name
-            // Photo loading would go here
+            
+            if (!item.photoUri.isNullOrEmpty()) {
+                binding.itemImage.setImageURI(android.net.Uri.parse(item.photoUri))
+            } else {
+                binding.itemImage.setImageResource(android.R.drawable.ic_menu_gallery)
+            }
+
             binding.root.setOnClickListener { onItemClick(item) }
         }
     }

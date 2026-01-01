@@ -26,4 +26,35 @@ object ImageUtils {
             file
         )
     }
+
+    fun cropAndSave(context: Context, originalUri: Uri, rect: android.graphics.Rect): Uri? {
+        return try {
+            val inputStream = context.contentResolver.openInputStream(originalUri)
+            val originalBitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
+            inputStream?.close()
+
+            if (originalBitmap == null) return null
+
+            // Ensure rect is within bitmap bounds
+            val left = rect.left.coerceIn(0, originalBitmap.width)
+            val top = rect.top.coerceIn(0, originalBitmap.height)
+            val width = rect.width().coerceIn(0, originalBitmap.width - left)
+            val height = rect.height().coerceIn(0, originalBitmap.height - top)
+
+            if (width <= 0 || height <= 0) return null
+
+            val croppedBitmap = android.graphics.Bitmap.createBitmap(originalBitmap, left, top, width, height)
+            
+            val croppedFile = createImageFile(context)
+            val out = java.io.FileOutputStream(croppedFile)
+            croppedBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, out)
+            out.flush()
+            out.close()
+
+            Uri.fromFile(croppedFile)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
 }
