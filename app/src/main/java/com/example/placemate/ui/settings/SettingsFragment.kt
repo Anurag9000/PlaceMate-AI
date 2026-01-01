@@ -17,6 +17,9 @@ class SettingsFragment : Fragment() {
     @javax.inject.Inject
     lateinit var settingsRepository: com.example.placemate.data.repository.SettingsRepository
 
+    @javax.inject.Inject
+    lateinit var modelRepository: com.example.placemate.data.repository.ModelRepository
+
     private var _binding: FragmentSettingsBinding? = null
     private val binding get() = _binding!!
 
@@ -35,6 +38,43 @@ class SettingsFragment : Fragment() {
         // Load existing settings
         val currentApiKey = settingsRepository.getGeminiApiKey()
         binding.editApiKey.setText(currentApiKey)
+
+        // Model Refresh Logic
+        binding.btnRefreshModels.setOnClickListener {
+            val apiKey = binding.editApiKey.text.toString()
+            if (apiKey.isBlank()) {
+                Toast.makeText(requireContext(), "Enter API Key first", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            
+            binding.btnRefreshModels.isEnabled = false
+            binding.btnRefreshModels.text = "Loading..."
+            
+            viewLifecycleOwner.lifecycleScope.launch {
+                val models = modelRepository.fetchAvailableModels(apiKey)
+                binding.btnRefreshModels.isEnabled = true
+                binding.btnRefreshModels.text = "Refresh List"
+                
+                if (models.isNotEmpty()) {
+                    val adapter = android.widget.ArrayAdapter(
+                        requireContext(),
+                        android.R.layout.simple_spinner_item,
+                        models.map { "${it.name} (${it.displayName})" }
+                    )
+                    adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                    binding.spinnerGeminiModel.adapter = adapter
+                    
+                    // Try to re-select current model
+                    val current = settingsRepository.getSelectedGeminiModel()
+                    val index = models.indexOfFirst { it.name == current }
+                    if (index >= 0) binding.spinnerGeminiModel.setSelection(index)
+                    
+                    Toast.makeText(requireContext(), "Found ${models.size} models", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(requireContext(), "No models found or key invalid", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
 
         viewLifecycleOwner.lifecycleScope.launch {
             settingsRepository.reminderCadenceHours.collect { hours ->
@@ -57,9 +97,10 @@ class SettingsFragment : Fragment() {
         binding.layoutApiKey.isEnabled = binding.switchUseGemini.isChecked
         binding.spinnerGeminiModel.isEnabled = binding.switchUseGemini.isChecked
 
-        // Model Spinner Setup
+        // Initial Model Logic (Fallback to XML if no dynamic list yet, or implemented slightly differently)
+        // For now, we'll keep the XML list as default until user refreshes
         val models = resources.getStringArray(com.example.placemate.R.array.gemini_models)
-        val currentModel = settingsRepository.getSelectedGeminiModel() // Assume this method exists or is added via extension/wrapper
+        val currentModel = settingsRepository.getSelectedGeminiModel() 
         val modelIndex = models.indexOfFirst { it.startsWith(currentModel) }
         if (modelIndex >= 0) {
             binding.spinnerGeminiModel.setSelection(modelIndex)

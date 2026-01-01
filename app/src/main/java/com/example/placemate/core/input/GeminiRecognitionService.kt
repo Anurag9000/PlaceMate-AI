@@ -26,7 +26,9 @@ class GeminiRecognitionService @Inject constructor(
 
     private fun getModel(): GenerativeModel? {
         val apiKey = configManager.getGeminiApiKey() ?: return null
-        val modelName = configManager.getSelectedGeminiModel()
+        val rawModelName = configManager.getSelectedGeminiModel()
+        // SDK might want "gemini-1.5-flash" but API returns "models/gemini-1.5-flash"
+        val modelName = rawModelName.removePrefix("models/")
         
         return GenerativeModel(
             modelName = modelName,
