@@ -106,6 +106,9 @@ class MLKitRecognitionService @Inject constructor(
                lower.contains("bookcase") ||
                lower.contains("cupboard") || 
                lower.contains("wardrobe") || 
+               lower.contains("almirah") ||
+               lower.contains("rack") ||
+               lower.contains("drawer") ||
                lower.contains("fridge") || 
                lower.contains("refrigerator") || 
                lower.contains("table") || 

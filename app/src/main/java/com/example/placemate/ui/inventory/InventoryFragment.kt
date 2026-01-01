@@ -63,23 +63,44 @@ class InventoryFragment : Fragment() {
             photoFile?.let { file ->
                 viewLifecycleOwner.lifecycleScope.launch {
                     val uri = android.net.Uri.fromFile(file)
-                    
-                    // NEW: Use Scene Recognition for holistic room scan
+                    val result = recognitionService.recognizeItem(uri)
+
+                    if (result.isContainer) {
+                        showContainerDetectionDialog(result)
+                    } else {
+                        handleSingleItemDetection(result)
+                    }
+                }
+            }
+        }
+    }
+
+    private val takeScenePictureLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            photoFile?.let { file ->
+                viewLifecycleOwner.lifecycleScope.launch {
+                    val uri = android.net.Uri.fromFile(file)
                     val sceneResult = recognitionService.recognizeScene(uri)
                     
-                    if (sceneResult.objects.size > 1) {
+                    if (sceneResult.objects.isNotEmpty()) {
                         viewModel.syncScene(sceneResult)
                         android.widget.Toast.makeText(requireContext(), 
-                            "Scene scanned! Syncing ${sceneResult.objects.size} objects...", 
+                            "Scene scanned! Created Room and found ${sceneResult.objects.count { !it.isContainer }} items.", 
                             android.widget.Toast.LENGTH_LONG).show()
                     } else {
-                        // Fallback to single item if only 1 object found
-                        val result = recognitionService.recognizeItem(uri)
-                        if (result.isContainer) {
-                            showContainerDetectionDialog(result)
-                        } else {
-                            handleSingleItemDetection(result)
-                        }
+                        // Even if 0 objects found, try to add it as a "New Room"
+                        android.app.AlertDialog.Builder(requireContext())
+                            .setTitle("No Objects Detected")
+                            .setMessage("I couldn't identify specific objects. Do you want to add this photo as a generic 'New Room'?")
+                            .setPositiveButton("Add Room") { _, _ ->
+                                viewModel.syncScene(com.example.placemate.core.input.SceneRecognitionResult(
+                                    listOf(com.example.placemate.core.input.RecognizedObject("New Scanned Room", true, 1.0f))
+                                ))
+                            }
+                            .setNegativeButton("Cancel", null)
+                            .show()
                     }
                 }
             }
@@ -97,6 +118,9 @@ class InventoryFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // Force cleanup of bug data on load
+        viewModel.repairData()
 
         val adapter = InventoryAdapter { item ->
             val bundle = Bundle().apply { putString("itemId", item.id) }
@@ -119,7 +143,11 @@ class InventoryFragment : Fragment() {
         }
 
         binding.btnVisualSearch.setOnClickListener {
-            startVisualSearch()
+            startVisualSearch(false)
+        }
+
+        binding.btnSceneScan.setOnClickListener {
+            startVisualSearch(true)
         }
 
         binding.btnClearData.setOnClickListener {
@@ -164,13 +192,13 @@ class InventoryFragment : Fragment() {
         }
     }
 
-    private fun startVisualSearch() {
+    private fun startVisualSearch(isScene: Boolean) {
         when {
             androidx.core.content.ContextCompat.checkSelfPermission(
                 requireContext(),
                 android.Manifest.permission.CAMERA
             ) == android.content.pm.PackageManager.PERMISSION_GRANTED -> {
-                launchCamera()
+                launchCamera(isScene)
             }
             else -> {
                 cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
@@ -178,10 +206,14 @@ class InventoryFragment : Fragment() {
         }
     }
 
-    private fun launchCamera() {
+    private fun launchCamera(isScene: Boolean) {
         photoFile = ImageUtils.createImageFile(requireContext())
         val uri = ImageUtils.getContentUri(requireContext(), photoFile!!)
-        takePictureLauncher.launch(uri)
+        if (isScene) {
+            takeScenePictureLauncher.launch(uri)
+        } else {
+            takePictureLauncher.launch(uri)
+        }
     }
 
     private fun startSpeechSearch() {

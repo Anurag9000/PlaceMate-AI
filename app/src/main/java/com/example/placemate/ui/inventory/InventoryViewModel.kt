@@ -31,41 +31,39 @@ class InventoryViewModel @Inject constructor(
             val objects = result.objects
             if (objects.isEmpty()) return@launch
 
-            // 1. Identify valid room/root if any
-            val potentialRoom = objects.find { it.label.contains("Room", ignoreCase = true) || it.label.contains("Kitchen", ignoreCase = true) }
+            // 1. Identify valid room/root if any. Default to "New Room" if none found.
+            val roomLabel = objects.find { 
+                val l = it.label.lowercase()
+                l.contains("room") || l.contains("kitchen") || l.contains("office") || l.contains("bedroom")
+            }?.label ?: "Scanned Room"
             
-            // For this version, we'll assume the first detected container or the "Room" is the parent
-            val parentLocation = if (potentialRoom != null) {
-                repository.getAllLocationsSync()?.find { it.name.equals(potentialRoom.label, true) }
-                    ?: repository.addLocationSync(potentialRoom.label, LocationType.ROOM, null)
-            } else {
-                null
-            }
+            val currentLocations = repository.getAllLocationsSync()
+            val parentLocation = currentLocations?.find { it.name.equals(roomLabel, true) }
+                ?: repository.addLocationSync(roomLabel, LocationType.ROOM, null)
 
-            // 2. Identify and create containers
-            val containers = objects.filter { it.isContainer && it.label != potentialRoom?.label }
+            // 2. Identify containers (Shelves, Tables, Almirahs)
+            val containers = objects.filter { it.isContainer && it.label != roomLabel }
             val containerEntities = containers.map { cont ->
-                repository.getAllLocationsSync()?.find { it.name.equals(cont.label, true) }
-                    ?: repository.addLocationSync(cont.label, LocationType.STORAGE, parentLocation?.id)
+                currentLocations?.find { it.name.equals(cont.label, true) && it.parentId == parentLocation.id }
+                    ?: repository.addLocationSync(cont.label, LocationType.STORAGE, parentLocation.id)
             }
 
-            // 3. Identify items and place them in the nearest container
-            val items = objects.filter { !it.isContainer }
+            // 3. Identify items and place them in the nearest container or the room
+            val items = objects.filter { !it.isContainer && !it.label.contains("Room", true) }
             items.forEach { item ->
-                // Basic logic: if we found a container, put it there. Otherwise, put in room.
+                // Logic: if we found a container, put it there. Otherwise, put in the room.
                 val targetLocation = containerEntities.firstOrNull() ?: parentLocation
                 
                 val itemEntity = ItemEntity(
                     name = item.label,
                     category = "Detected",
-                    description = "Auto-detected from scene scan",
+                    description = "Detected in ${parentLocation.name}",
                     photoUri = null
                 )
-                repository.saveItem(itemEntity, targetLocation?.id)
+                repository.saveItem(itemEntity, targetLocation.id)
             }
         }
     }
-
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
 
@@ -100,6 +98,12 @@ class InventoryViewModel @Inject constructor(
     fun clearAllData() {
         viewModelScope.launch {
             repository.nukeData()
+        }
+    }
+
+    fun repairData() {
+        viewModelScope.launch {
+            repository.repairBadData()
         }
     }
 }

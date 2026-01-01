@@ -48,6 +48,9 @@ interface InventoryDao {
 
     @Query("DELETE FROM item_placements")
     suspend fun deleteAllPlacements()
+
+    @Query("SELECT * FROM items")
+    suspend fun getAllItemsSync(): List<ItemEntity>
 }
 
 @Dao
@@ -55,11 +58,15 @@ interface LocationDao {
     @Query("SELECT * FROM locations")
     fun getAllLocations(): Flow<List<LocationEntity>>
 
+
     @Query("SELECT * FROM locations")
     suspend fun getAllLocationsSync(): List<LocationEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLocation(location: LocationEntity)
+
+    @Delete
+    suspend fun deleteLocation(location: LocationEntity)
 
     @Query("DELETE FROM locations")
     suspend fun deleteAllLocations()

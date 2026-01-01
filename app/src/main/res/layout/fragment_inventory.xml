@@ -38,6 +38,18 @@
         app:layout_constraintTop_toTopOf="@id/search_layout" />
 
     <ImageButton
+        android:id="@+id/btn_scene_scan"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginEnd="8dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Room Scene Scan"
+        android:src="@android:drawable/ic_menu_view"
+        app:layout_constraintBottom_toBottomOf="@id/search_layout"
+        app:layout_constraintEnd_toStartOf="@id/btn_visual_search"
+        app:layout_constraintTop_toTopOf="@id/search_layout" />
+
+    <ImageButton
         android:id="@+id/btn_visual_search"
         android:layout_width="48dp"
         android:layout_height="48dp"
@@ -57,6 +69,7 @@
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="Clear All Data"
         android:src="@android:drawable/ic_menu_delete"
+        app:tint="@android:color/holo_red_dark"
         app:layout_constraintBottom_toBottomOf="@id/search_layout"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/search_layout" />

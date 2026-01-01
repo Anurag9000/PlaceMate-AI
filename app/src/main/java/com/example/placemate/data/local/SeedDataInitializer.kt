@@ -17,6 +17,15 @@ class SeedDataInitializer @Inject constructor(
 ) {
     suspend fun seedIfNeeded() {
         withContext(Dispatchers.IO) {
+            // FORCED CLEANUP: Remove duplicate bug data if any exists
+            inventoryDao.getAllItemsSync().filter { 
+                it.name.contains("Harry Potter", true) || 
+                it.name.contains("Kitchen Knife", true) ||
+                it.name.contains("TV Remote", true)
+            }.forEach { 
+                inventoryDao.deleteItem(it)
+            }
+
             val count = inventoryDao.getItemCount()
             if (count > 0) return@withContext
             
