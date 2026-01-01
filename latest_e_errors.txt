@@ -1,0 +1,106 @@
+﻿
+  
+  > Task 
+:app:kspDebugKotlin
+> ./gradlew : e: 
+  [ksp] 
+InjectProcess
+  ingStep was 
+unable 
+  could not be 
+  resolved.
+> At line:1 char:1
+  + ./gradlew 
+  assembleDebug > 
+   
+  
+> Dependency trace:
+      => element 
+  (CLASS): 
+com.exampl
+  nExistentClass' 
+is 
+  on your 
+classpath.
+> e: [ksp] 
+AssistedIn
+  
+jectProcessingStep 
+  was unable to 
+  resolved.
+  
+> Dependency trace:
+      => element 
+  (CLASS): 
+com.exampl
+  eminderWorker
+      => 
+annotation 
+> type: HiltWorker
+      => type 
+(ERROR 
+  annotation 
+type): e
+  nExistentClass' 
+is 
+  on your 
+classpath.
+> e: [ksp] 
+AssistedPr
+  ocessingStep was 
+  unable to 
+process 
+  resolved.
+  
+> Dependency trace:
+      => element 
+  (CLASS): 
+com.exampl
+  eminderWorker
+      => 
+annotation 
+> type: HiltWorker
+      => type 
+(ERROR 
+  annotation 
+type): e
+  nExistentClass' 
+is 
+  on your 
+classpath.
+> e: [ksp] 
+AssistedPr
+  ocessingStep was 
+  unable to 
+process 
+  resolved.
+  
+> Dependency trace:
+      => element 
+  (CLASS): 
+com.exampl
+  eminderWorker
+      => 
+annotation 
+> type: HiltWorker
+      => type 
+(ERROR 
+  annotation 
+type): e
+  nExistentClass' 
+is 
+  on your 
+classpath.
+> e: Error 
+occurred 
+  in KSP, check 
+log 
+  for detail
+  > Task :app:kspDe
+bugKotlin FAILED
+  
+> FAILURE: Build 
+  failed with an 
+  exception.
+
+

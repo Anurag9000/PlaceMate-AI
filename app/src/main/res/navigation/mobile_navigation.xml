@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/mobile_navigation"
+    app:startDestination="@+id/nav_inventory">
+
+    <fragment
+        android:id="@+id/nav_inventory"
+        android:name="com.example.placemate.ui.inventory.InventoryFragment"
+        android:label="@string/menu_inventory"
+        tools:layout="@layout/fragment_inventory" />
+
+    <fragment
+        android:id="@+id/nav_locations"
+        android:name="com.example.placemate.ui.locations.LocationsFragment"
+        android:label="@string/menu_locations"
+        tools:layout="@layout/fragment_locations" />
+
+    <fragment
+        android:id="@+id/nav_taken_items"
+        android:name="com.example.placemate.ui.taken.TakenItemsFragment"
+        android:label="@string/menu_taken_items"
+        tools:layout="@layout/fragment_taken_items" />
+
+    <fragment
+        android:id="@+id/nav_settings"
+        android:name="com.example.placemate.ui.settings.SettingsFragment"
+        android:label="@string/menu_settings"
+        tools:layout="@layout/fragment_settings" />
+
+    <fragment
+        android:id="@+id/nav_add_item"
+        android:name="com.example.placemate.ui.inventory.AddItemFragment"
+        android:label="@string/title_add_item"
+        tools:layout="@layout/fragment_add_item" />
+
+    <fragment
+        android:id="@+id/nav_item_detail"
+        android:name="com.example.placemate.ui.inventory.ItemDetailFragment"
+        android:label="@string/title_item_detail"
+        tools:layout="@layout/fragment_item_detail">
+        <argument
+            android:name="itemId"
+            app:argType="string" />
+    </fragment>
+</navigation>

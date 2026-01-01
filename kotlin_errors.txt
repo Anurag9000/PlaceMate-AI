@@ -1,0 +1,127 @@
+﻿
+  build_output.txt:
+36:
+  build_output.txt:
+37:> Task 
+:app:kspDebugKotlin
+> build_output.txt:
+38:./gradlew : e: 
+  build_output.txt:
+39:[ksp] 
+InjectProcess
+  build_output.txt:
+40:ingStep was 
+unable 
+  build_output.txt:
+102:nExistentClass'
+ is 
+  build_output.txt:
+103:on your 
+classpath.
+> build_output.txt:
+104:e: [ksp] 
+AssistedIn
+  build_output.txt:
+105:jectProcessingS
+tep 
+  build_output.txt:
+106:was unable to 
+  build_output.txt:
+128:eminderWorker
+  build_output.txt:
+129:    => 
+annotation 
+> build_output.txt:
+130:type: 
+HiltWorker
+  build_output.txt:
+131:    => type 
+(ERROR 
+  build_output.txt:
+132:annotation 
+type): e
+  build_output.txt:
+147:nExistentClass'
+ is 
+  build_output.txt:
+148:on your 
+classpath.
+> build_output.txt:
+149:e: [ksp] 
+AssistedPr
+  build_output.txt:
+150:ocessingStep 
+was 
+  build_output.txt:
+151:unable to 
+process 
+  build_output.txt:
+162:eminderWorker
+  build_output.txt:
+163:    => 
+annotation 
+> build_output.txt:
+164:type: 
+HiltWorker
+  build_output.txt:
+165:    => type 
+(ERROR 
+  build_output.txt:
+166:annotation 
+type): e
+  build_output.txt:
+181:nExistentClass'
+ is 
+  build_output.txt:
+182:on your 
+classpath.
+> build_output.txt:
+183:e: [ksp] 
+AssistedPr
+  build_output.txt:
+184:ocessingStep 
+was 
+  build_output.txt:
+185:unable to 
+process 
+  build_output.txt:
+196:eminderWorker
+  build_output.txt:
+197:    => 
+annotation 
+> build_output.txt:
+198:type: 
+HiltWorker
+  build_output.txt:
+199:    => type 
+(ERROR 
+  build_output.txt:
+200:annotation 
+type): e
+  build_output.txt:
+215:nExistentClass'
+ is 
+  build_output.txt:
+216:on your 
+classpath.
+> build_output.txt:
+217:e: Error 
+occurred 
+  build_output.txt:
+218:in KSP, check 
+log 
+  build_output.txt:
+219:for detail
+  build_output.txt:
+221:> Task :app:ksp
+DebugKotlin FAILED
+  build_output.txt:
+222:
+> build_output.txt:
+223:FAILURE: Build 
+  build_output.txt:
+224:failed with an 
+  build_output.txt:
+225:exception.
+
+

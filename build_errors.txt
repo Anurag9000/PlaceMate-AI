@@ -1,0 +1,100 @@
+﻿
+  > Task 
+:app:preBuild 
+UP-TO-DATE
+  > Task 
+:app:preDebugBuild 
+UP-TO-DATE
+  > Task :app:merge
+DebugNativeDebugMet
+adata NO-SOURCE
+> > Task :app:check
+KotlinGradlePluginC
+onfigurationErrors 
+SKIPPED
+  > Task :app:dataB
+indingMergeDependen
+cyArtifactsDebug 
+UP-TO-DATE
+  > Task :app:gener
+ateDebugResValues 
+UP-TO-DATE
+  > Task :app:gener
+ateDebugResources
+  > Task :app:write
+DebugSigningConfigV
+ersions UP-TO-DATE
+  > Task :app:merge
+DebugResources
+  > Task :app:dataB
+indingGenBaseClasse
+sDebug
+> > Task :app:proce
+ssDebugResources 
+FAILED
+  ./gradlew : 
+  At line:1 char:1
+  + ./gradlew 
+   String) [], Re  
+  
+  moteException
+      + 
+FullyQualifi 
+>    edErrorId : 
+Na  
+    tiveCommandErr 
+  
+   or
+   
+  FAILURE: Build 
+> failed with an 
+  exception.
+  
+  * What went 
+wrong:
+> Execution failed 
+  for task 
+':app:proc
+  
+essDebugResources'.
+  > A failure 
+  
+cesTask$TaskAction
+     > Android 
+  resource linking 
+> failed
+       
+com.example.pl
+  
+acemate.app-mergeDe
+  
+bugResources-61:/la
+  
+yout/item_transform
+> .xml:17: error: 
+  resource 
+string/ima
+  
+ge_view_item_transf
+  
+orm_content_descrip
+  
+ansform_content_des
+  cription) not 
+  found.
+>      error: 
+failed 
+  linking file 
+  resources.
+  
+  
+https://help.gradle
+  .org.
+  
+> BUILD FAILED in 
+8s
+  29 actionable 
+tasks: 7 executed, 
+22 up-to-date
+
+

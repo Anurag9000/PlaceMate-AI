@@ -1,0 +1,21 @@
+﻿
+build_output.txt:39:./g
+radlew : e: file
+build_output.txt:73:e: 
+file:///D:/Resea
+build_output.txt:81:e: 
+file:///D:/Resea
+build_output.txt:90:e: 
+file:///D:/Resea
+build_output.txt:99:e: 
+file:///D:/Resea
+build_output.txt:110:e:
+ file:///D:/Resea
+build_output.txt:119:e:
+ file:///D:/Resea
+build_output.txt:128:e:
+ file:///D:/Resea
+build_output.txt:139:FA
+ILURE: Build 
+
+

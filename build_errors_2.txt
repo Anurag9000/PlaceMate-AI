@@ -1,0 +1,58 @@
+﻿
+  > Task 
+:app:preBuild 
+UP-TO-DATE
+  > Task 
+:app:preDebugBuild 
+UP-TO-DATE
+  > Task :app:merge
+DebugNativeDebugMet
+adata NO-SOURCE
+> > Task :app:check
+KotlinGradlePluginC
+onfigurationErrors 
+SKIPPED
+  > Task :app:dataB
+indingMergeDependen
+cyArtifactsDebug 
+UP-TO-DATE
+  > Task :app:gener
+ateDebugResValues 
+UP-TO-DATE
+  > Task :app:gener
+ateDebugResources
+   String) [], Re  
+  
+  moteException
+      + 
+FullyQualifi 
+>    edErrorId : 
+Na  
+    tiveCommandErr 
+  
+   or
+   
+  
+acemate.app-mergeDe
+  
+bugResources-61:/la
+  
+yout/item_transform
+> .xml:17: error: 
+  resource 
+string/ima
+  
+ge_view_item_transf
+  
+orm_content_descrip
+  
+ansform_content_des
+  cription) not 
+  found.
+>      error: 
+failed 
+  linking file 
+  resources.
+  
+
+

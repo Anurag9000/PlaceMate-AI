@@ -1,0 +1,35 @@
+<resources>
+    <string name="app_name">Placemate</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="nav_header_title">PlaceMate</string>
+    <string name="nav_header_subtitle">AI Inventory Manager</string>
+    <string name="nav_header_desc">PlaceMate Navigation</string>
+    <string name="action_settings">Settings</string>
+
+    <string name="menu_inventory">Inventory</string>
+    <string name="menu_locations">Locations</string>
+    <string name="menu_taken_items">Taken Items</string>
+    <string name="menu_settings">Settings</string>
+    <string name="menu_add_item">Add Item</string>
+
+    <string name="title_inventory">Inventory</string>
+    <string name="title_locations">Locations</string>
+    <string name="title_taken_items">Taken Items</string>
+    <string name="title_add_item">Add New Item</string>
+    <string name="title_item_detail">Item Details</string>
+
+    <string name="hint_search">Search items...</string>
+    <string name="label_name">Name</string>
+    <string name="label_category">Category</string>
+    <string name="label_location">Location</string>
+    <string name="label_notes">Notes</string>
+    <string name="label_taken_by">Taken By</string>
+    <string name="label_due_date">Due Date</string>
+
+    <string name="btn_save">Save</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="btn_mark_taken">Mark Taken</string>
+    <string name="btn_mark_returned">Mark Returned</string>
+    <string name="fab_content_description">AI Assistant</string>
+</resources>
