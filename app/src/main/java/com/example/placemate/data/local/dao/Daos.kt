@@ -21,7 +21,14 @@ interface InventoryDao {
     @Delete
     suspend fun deleteItem(item: ItemEntity)
 
-    @Query("SELECT * FROM items WHERE name LIKE '%' || :query || '%' OR category LIKE '%' || :query || '%'")
+    @Query("""
+        SELECT DISTINCT i.* FROM items i 
+        LEFT JOIN item_placements p ON i.id = p.itemId 
+        LEFT JOIN locations l ON p.locationId = l.id 
+        WHERE i.name LIKE '%' || :query || '%' 
+        OR i.category LIKE '%' || :query || '%' 
+        OR l.name LIKE '%' || :query || '%'
+    """)
     fun searchItems(query: String): Flow<List<ItemEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

@@ -33,9 +33,18 @@ class SeedDataInitializer @Inject constructor(
             val drawer = LocationEntity(name = "Cutlery Drawer", type = LocationType.CONTAINER, parentId = kitchen.id)
             locationDao.insertLocation(drawer)
             
-            inventoryDao.insertItem(ItemEntity(name = "TV Remote", category = "Electronics", description = "For the main TV", photoUri = null))
-            inventoryDao.insertItem(ItemEntity(name = "Kitchen Knife", category = "Kitchenware", description = "Chef's knife", photoUri = null))
-            inventoryDao.insertItem(ItemEntity(name = "Harry Potter Book", category = "Books", description = "First edition", photoUri = null))
+            val tvRemote = ItemEntity(name = "TV Remote", category = "Electronics", description = "For the main TV", photoUri = null)
+            val kitchenKnife = ItemEntity(name = "Kitchen Knife", category = "Kitchenware", description = "Chef's knife", photoUri = null)
+            val harryPotter = ItemEntity(name = "Harry Potter Book", category = "Books", description = "First edition", photoUri = null)
+            
+            inventoryDao.insertItem(tvRemote)
+            inventoryDao.insertItem(kitchenKnife)
+            inventoryDao.insertItem(harryPotter)
+            
+            inventoryDao.insertPlacement(com.example.placemate.data.local.entities.ItemPlacementEntity(tvRemote.id, livingRoom.id))
+            inventoryDao.insertPlacement(com.example.placemate.data.local.entities.ItemPlacementEntity(kitchenKnife.id, kitchen.id))
+            inventoryDao.insertPlacement(com.example.placemate.data.local.entities.ItemPlacementEntity(harryPotter.id, shelf.id))
+
         }
     }
 }
