@@ -38,13 +38,14 @@ class InventoryFragment : Fragment() {
     lateinit var synonymManager: com.example.placemate.core.utils.SynonymManager
 
     private var photoFile: File? = null
+    private var pendingIsScene: Boolean = false
 
 
     private val cameraPermissionLauncher = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            launchCamera()
+            launchCamera(pendingIsScene)
         }
     }
 
@@ -119,9 +120,6 @@ class InventoryFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Force cleanup of bug data on load
-        viewModel.repairData()
-
         val adapter = InventoryAdapter { item ->
             val bundle = Bundle().apply { putString("itemId", item.id) }
             findNavController().navigate(R.id.nav_item_detail, bundle)
@@ -193,6 +191,7 @@ class InventoryFragment : Fragment() {
     }
 
     private fun startVisualSearch(isScene: Boolean) {
+        pendingIsScene = isScene
         when {
             androidx.core.content.ContextCompat.checkSelfPermission(
                 requireContext(),

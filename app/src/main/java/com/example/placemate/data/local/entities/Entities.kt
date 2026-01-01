@@ -6,7 +6,10 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import java.util.UUID
 
-@Entity(tableName = "items")
+@Entity(
+    tableName = "items",
+    indices = [Index(value = ["name"], unique = true)]
+)
 data class ItemEntity(
     @PrimaryKey val id: String = UUID.randomUUID().toString(),
     val name: String,
@@ -22,7 +25,10 @@ enum class ItemStatus {
     PRESENT, TAKEN, UNKNOWN
 }
 
-@Entity(tableName = "locations")
+@Entity(
+    tableName = "locations",
+    indices = [Index(value = ["name", "parentId"], unique = true)]
+)
 data class LocationEntity(
     @PrimaryKey val id: String = UUID.randomUUID().toString(),
     val name: String,

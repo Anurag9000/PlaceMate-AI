@@ -63,27 +63,4 @@ class InventoryRepository @Inject constructor(
         locationDao.insertLocation(location)
         return location
     }
-
-    suspend fun repairBadData() {
-        // 1. Repair Items (Remove duplicate bug data)
-        val badNames = listOf("Harry Potter", "Kitchen Knife", "TV Remote")
-        val allItems = inventoryDao.getAllItemsSync()
-        allItems.forEach { item ->
-            if (badNames.any { bad -> item.name.contains(bad, true) }) {
-                inventoryDao.deleteItem(item)
-            }
-        }
-
-        // 2. Repair Locations (Deduplicate)
-        val allLocations = locationDao.getAllLocationsSync()
-        val seenNames = mutableSetOf<String>()
-        allLocations.forEach { loc ->
-            val normalized = loc.name.lowercase().trim()
-            if (seenNames.contains(normalized)) {
-                locationDao.deleteLocation(loc)
-            } else {
-                seenNames.add(normalized)
-            }
-        }
-    }
 }

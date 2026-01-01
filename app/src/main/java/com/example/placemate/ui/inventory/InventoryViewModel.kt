@@ -100,10 +100,4 @@ class InventoryViewModel @Inject constructor(
             repository.nukeData()
         }
     }
-
-    fun repairData() {
-        viewModelScope.launch {
-            repository.repairBadData()
-        }
-    }
 }

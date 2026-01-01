@@ -17,22 +17,16 @@ class SeedDataInitializer @Inject constructor(
 ) {
     suspend fun seedIfNeeded() {
         withContext(Dispatchers.IO) {
-            // FORCED CLEANUP: Remove duplicate bug data if any exists
-            inventoryDao.getAllItemsSync().filter { 
-                it.name.contains("Harry Potter", true) || 
-                it.name.contains("Kitchen Knife", true) ||
-                it.name.contains("TV Remote", true)
-            }.forEach { 
-                inventoryDao.deleteItem(it)
-            }
-
-            val count = inventoryDao.getItemCount()
-            if (count > 0) return@withContext
+            val itemCount = inventoryDao.getItemCount()
+            val locationCount = locationDao.getAllLocationsSync().size
             
-            // Locations
-            val livingRoom = LocationEntity(name = "Living Room", type = LocationType.ROOM, parentId = null)
-            val kitchen = LocationEntity(name = "Kitchen", type = LocationType.ROOM, parentId = null)
-            val bedroom = LocationEntity(name = "Bedroom", type = LocationType.ROOM, parentId = null)
+            // If we already have ANY data, don't seed again.
+            if (itemCount > 0 || locationCount > 0) return@withContext
+            
+            // Locations with FIXED IDs for idempotency
+            val livingRoom = LocationEntity(id = "seed_living_room", name = "Living Room", type = LocationType.ROOM, parentId = null)
+            val kitchen = LocationEntity(id = "seed_kitchen", name = "Kitchen", type = LocationType.ROOM, parentId = null)
+            val bedroom = LocationEntity(id = "seed_bedroom", name = "Bedroom", type = LocationType.ROOM, parentId = null)
             
             locationDao.insertLocation(livingRoom)
             locationDao.insertLocation(kitchen)
