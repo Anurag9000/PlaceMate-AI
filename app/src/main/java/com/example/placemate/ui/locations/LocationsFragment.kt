@@ -43,7 +43,7 @@ class LocationsFragment : Fragment() {
         val adapter = LocationAdapter { location ->
             // Navigate to InventoryFragment with search query
             val bundle = Bundle().apply { putString("searchQuery", location.name) }
-            androidx.navigation.fragment.findNavController(this).navigate(R.id.nav_inventory, bundle)
+            androidx.navigation.fragment.NavHostFragment.findNavController(this).navigate(R.id.nav_inventory, bundle)
         }
 
         binding.recyclerView.layoutManager = LinearLayoutManager(requireContext())
