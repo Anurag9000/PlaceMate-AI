@@ -40,6 +40,22 @@ class InventoryFragment : Fragment() {
     private var photoFile: File? = null
 
 
+    private val cameraPermissionLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            launchCamera()
+        }
+    }
+
+    private val audioPermissionLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            launchSpeechRecognition()
+        }
+    }
+
     private val takePictureLauncher = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.TakePicture()
     ) { success ->
@@ -103,12 +119,40 @@ class InventoryFragment : Fragment() {
     }
 
     private fun startVisualSearch() {
+        when {
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                requireContext(),
+                android.Manifest.permission.CAMERA
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED -> {
+                launchCamera()
+            }
+            else -> {
+                cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
+            }
+        }
+    }
+
+    private fun launchCamera() {
         photoFile = ImageUtils.createImageFile(requireContext())
         val uri = ImageUtils.getContentUri(requireContext(), photoFile!!)
         takePictureLauncher.launch(uri)
     }
 
     private fun startSpeechSearch() {
+        when {
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                requireContext(),
+                android.Manifest.permission.RECORD_AUDIO
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED -> {
+                launchSpeechRecognition()
+            }
+            else -> {
+                audioPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+            }
+        }
+    }
+
+    private fun launchSpeechRecognition() {
         viewLifecycleOwner.lifecycleScope.launch {
             speechManager.startListening().collect { state ->
                 if (state is com.example.placemate.core.input.SpeechState.Result) {

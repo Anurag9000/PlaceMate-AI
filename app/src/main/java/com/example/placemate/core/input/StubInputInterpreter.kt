@@ -3,8 +3,12 @@ package com.example.placemate.core.input
 import javax.inject.Inject
 import javax.inject.Singleton
 
+import com.example.placemate.core.utils.SynonymManager
+
 @Singleton
-class StubInputInterpreter @Inject constructor() : InputInterpreter {
+class StubInputInterpreter @Inject constructor(
+    private val synonymManager: SynonymManager
+) : InputInterpreter {
     override suspend fun interpret(input: UserInput): InterpretedIntent {
         return when (input) {
             is UserInput.Text -> interpretText(input.value)
@@ -31,7 +35,10 @@ class StubInputInterpreter @Inject constructor() : InputInterpreter {
                 val itemName = text.replace("returned", "").trim()
                 InterpretedIntent.MarkReturned(itemName = itemName)
             }
-            else -> InterpretedIntent.Search(query = text)
+            else -> {
+                val normalizedQuery = synonymManager.getRepresentativeName(text)
+                InterpretedIntent.Search(query = normalizedQuery)
+            }
         }
     }
 }
