@@ -32,7 +32,7 @@ data class LocationEntity(
 )
 
 enum class LocationType {
-    ROOM, STORAGE, CONTAINER
+    ROOM, STORAGE, CONTAINER, FURNITURE
 }
 
 @Entity(
