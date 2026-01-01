@@ -2,6 +2,7 @@ package com.example.placemate.ui.locations
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.placemate.data.local.entities.ItemEntity
 import com.example.placemate.data.local.entities.LocationEntity
 import com.example.placemate.data.local.entities.LocationType
 import com.example.placemate.data.repository.InventoryRepository
@@ -31,5 +32,13 @@ class LocationsViewModel @Inject constructor(
             )
             repository.saveLocation(newLocation)
         }
+    }
+
+    fun checkLocationExists(name: String): LocationEntity? {
+        return locations.value.find { it.name.equals(name, ignoreCase = true) }
+    }
+
+    suspend fun getItemsForLocation(locationId: String): List<ItemEntity> {
+        return repository.getItemsForLocation(locationId)
     }
 }

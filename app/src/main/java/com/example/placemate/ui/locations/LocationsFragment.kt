@@ -64,6 +64,11 @@ class LocationsFragment : Fragment() {
                 }
             }
         }
+
+        arguments?.getString("openAddDialogName")?.let { name ->
+            showAddLocationDialog(name)
+            arguments?.remove("openAddDialogName")
+        }
     }
 
 
@@ -103,8 +108,47 @@ class LocationsFragment : Fragment() {
                 val type = types[typeSpinner.selectedItemPosition]
                 val parentIndex = parentSpinner.selectedItemPosition
                 val parentId = if (parentIndex == 0) null else locations[parentIndex - 1].id
-                viewModel.addLocation(name, type, parentId)
+
+                val existingLocation = viewModel.checkLocationExists(name)
+                if (existingLocation != null) {
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        val items = viewModel.getItemsForLocation(existingLocation.id)
+                        showDuplicateWarning(existingLocation, items) {
+                            viewModel.addLocation(name, type, parentId)
+                        }
+                    }
+                } else {
+                    viewModel.addLocation(name, type, parentId)
+                }
             }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showDuplicateWarning(
+        existingLocation: com.example.placemate.data.local.entities.LocationEntity,
+        items: List<com.example.placemate.data.local.entities.ItemEntity>,
+        onConfirm: () -> Unit
+    ) {
+        val message = StringBuilder()
+        message.append("Location '${existingLocation.name}' already exists.\n\n")
+        if (items.isEmpty()) {
+            message.append("It is currently empty.")
+        } else {
+            message.append("It contains ${items.size} items:\n")
+            items.take(5).forEach { item ->
+                message.append("- ${item.name}\n")
+            }
+            if (items.size > 5) {
+                message.append("...and ${items.size - 5} more.")
+            }
+        }
+        message.append("\n\nAre you sure you want to create a new duplicate?")
+
+        android.app.AlertDialog.Builder(requireContext())
+            .setTitle("Duplicate Location Warning")
+            .setMessage(message.toString())
+            .setPositiveButton("Create Anyway") { _, _ -> onConfirm() }
             .setNegativeButton("Cancel", null)
             .show()
     }

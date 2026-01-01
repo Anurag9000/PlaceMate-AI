@@ -36,6 +36,9 @@ interface InventoryDao {
 
     @Query("SELECT l.* FROM locations l JOIN item_placements p ON l.id = p.locationId WHERE p.itemId = :itemId LIMIT 1")
     suspend fun getLocationForItem(itemId: String): LocationEntity?
+
+    @Query("SELECT i.* FROM items i JOIN item_placements p ON i.id = p.itemId WHERE p.locationId = :locationId")
+    suspend fun getItemsForLocation(locationId: String): List<ItemEntity>
 }
 
 @Dao

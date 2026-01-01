@@ -30,7 +30,8 @@ class MLKitRecognitionService @Inject constructor(
                 RecognitionResult(
                     suggestedName = normalizedLabel.replaceFirstChar { it.uppercase() },
                     suggestedCategory = mapLabelToCategory(normalizedLabel),
-                    confidence = bestLabel.confidence
+                    confidence = bestLabel.confidence,
+                    isContainer = isLabelContainer(normalizedLabel)
                 )
 
             } else {
@@ -49,5 +50,18 @@ class MLKitRecognitionService @Inject constructor(
             "electronics", "gadget", "phone" -> "Electronics"
             else -> "Household"
         }
+    }
+
+    private fun isLabelContainer(label: String): Boolean {
+        val lower = label.lowercase()
+        return lower.contains("shelf") || 
+               lower.contains("cupboard") || 
+               lower.contains("wardrobe") || 
+               lower.contains("fridge") || 
+               lower.contains("refrigerator") || 
+               lower.contains("table") || 
+               lower.contains("desk") ||
+               lower.contains("box") ||
+               lower.contains("cabinet")
     }
 }

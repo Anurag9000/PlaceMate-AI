@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.map
+import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -22,12 +24,20 @@ class InventoryViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
 
-    val items: StateFlow<List<ItemEntity>> = _searchQuery
+    val items: StateFlow<List<ItemUiModel>> = _searchQuery
         .flatMapLatest { query ->
             if (query.isEmpty()) {
                 repository.getAllItems()
             } else {
                 repository.searchItems(query)
+            }
+        }
+        .map { entityList ->
+            entityList.groupBy { 
+                // Group by attributes that define "sameness" for the user
+                Triple(it.name, it.category, it.status) 
+            }.map { (_, group) ->
+                ItemUiModel(group.first(), group.size)
             }
         }
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())

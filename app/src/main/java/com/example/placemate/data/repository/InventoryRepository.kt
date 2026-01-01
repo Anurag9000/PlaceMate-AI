@@ -43,4 +43,5 @@ class InventoryRepository @Inject constructor(
         }
         return path.joinToString(" > ")
     }
+    suspend fun getItemsForLocation(locationId: String): List<ItemEntity> = inventoryDao.getItemsForLocation(locationId)
 }

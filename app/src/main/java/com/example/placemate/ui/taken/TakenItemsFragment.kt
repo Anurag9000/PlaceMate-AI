@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.placemate.R
 import com.example.placemate.databinding.FragmentTakenItemsBinding
 import com.example.placemate.ui.inventory.InventoryAdapter
+import com.example.placemate.ui.inventory.ItemUiModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -57,7 +58,8 @@ class TakenItemsFragment : Fragment() {
                 val query = s?.toString()?.lowercase() ?: ""
                 viewLifecycleOwner.lifecycleScope.launch {
                     viewModel.takenItems.collect { items ->
-                        adapter.submitList(items.filter { it.name.lowercase().contains(query) })
+                        val filtered = items.filter { it.name.lowercase().contains(query) }
+                        adapter.submitList(filtered.map { ItemUiModel(it, 1) })
                     }
                 }
             }
@@ -68,7 +70,7 @@ class TakenItemsFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.takenItems.collect { items ->
-                    adapter.submitList(items)
+                    adapter.submitList(items.map { ItemUiModel(it, 1) })
                 }
             }
         }

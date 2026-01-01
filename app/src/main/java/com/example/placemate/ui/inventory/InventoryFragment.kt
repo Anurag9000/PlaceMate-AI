@@ -64,9 +64,29 @@ class InventoryFragment : Fragment() {
                 viewLifecycleOwner.lifecycleScope.launch {
                     val uri = android.net.Uri.fromFile(file)
                     val result = recognitionService.recognizeItem(uri)
-                    result.suggestedName?.let { name ->
-                        binding.searchEditText.setText(name)
-                        viewModel.updateSearchQuery(name)
+
+                    if (result.isContainer) {
+                        android.app.AlertDialog.Builder(requireContext())
+                            .setTitle("Location Detected")
+                            .setMessage("I detected a '${result.suggestedName}'. Do you want to add this as a new Location?")
+                            .setPositiveButton("Add Location") { _, _ ->
+                                val bundle = Bundle().apply { 
+                                    putString("openAddDialogName", result.suggestedName)
+                                }
+                                findNavController().navigate(R.id.nav_locations, bundle)
+                            }
+                            .setNegativeButton("Search as Item") { _, _ ->
+                                result.suggestedName?.let { name ->
+                                    binding.searchEditText.setText(name)
+                                    viewModel.updateSearchQuery(name)
+                                }
+                            }
+                            .show()
+                    } else {
+                        result.suggestedName?.let { name ->
+                            binding.searchEditText.setText(name)
+                            viewModel.updateSearchQuery(name)
+                        }
                     }
                 }
             }
@@ -113,6 +133,7 @@ class InventoryFragment : Fragment() {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.items.collect { items ->
                     adapter.submitList(items)
+                    binding.tvEmptyState.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
                 }
             }
         }

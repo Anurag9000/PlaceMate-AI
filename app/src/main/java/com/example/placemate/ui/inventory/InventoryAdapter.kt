@@ -8,9 +8,14 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.placemate.data.local.entities.ItemEntity
 import com.example.placemate.databinding.ItemInventoryBinding
 
+data class ItemUiModel(
+    val item: ItemEntity,
+    val count: Int
+)
+
 class InventoryAdapter(
     private val onItemClick: (ItemEntity) -> Unit
-) : ListAdapter<ItemEntity, InventoryAdapter.ViewHolder>(ItemDiffCallback()) {
+) : ListAdapter<ItemUiModel, InventoryAdapter.ViewHolder>(ItemDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemInventoryBinding.inflate(
@@ -29,21 +34,22 @@ class InventoryAdapter(
     inner class ViewHolder(private val binding: ItemInventoryBinding) :
         RecyclerView.ViewHolder(binding.root) {
 
-        fun bind(item: ItemEntity) {
-            binding.itemName.text = item.name
+        fun bind(uiModel: ItemUiModel) {
+            val item = uiModel.item
+            binding.itemName.text = if (uiModel.count > 1) "${item.name} (x${uiModel.count})" else item.name
             binding.itemCategory.text = item.category
             binding.itemStatus.text = item.status.name
-            // Photo loading would go here (e.g., using Glide or Coil)
+            // Photo loading would go here
             binding.root.setOnClickListener { onItemClick(item) }
         }
     }
 
-    class ItemDiffCallback : DiffUtil.ItemCallback<ItemEntity>() {
-        override fun areItemsTheSame(oldItem: ItemEntity, newItem: ItemEntity): Boolean {
-            return oldItem.id == newItem.id
+    class ItemDiffCallback : DiffUtil.ItemCallback<ItemUiModel>() {
+        override fun areItemsTheSame(oldItem: ItemUiModel, newItem: ItemUiModel): Boolean {
+            return oldItem.item.id == newItem.item.id
         }
 
-        override fun areContentsTheSame(oldItem: ItemEntity, newItem: ItemEntity): Boolean {
+        override fun areContentsTheSame(oldItem: ItemUiModel, newItem: ItemUiModel): Boolean {
             return oldItem == newItem
         }
     }

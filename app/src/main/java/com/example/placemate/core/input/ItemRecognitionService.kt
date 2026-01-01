@@ -11,7 +11,8 @@ interface ItemRecognitionService {
 data class RecognitionResult(
     val suggestedName: String?,
     val suggestedCategory: String?,
-    val confidence: Float
+    val confidence: Float,
+    val isContainer: Boolean = false
 )
 
 @Singleton
@@ -22,7 +23,8 @@ class StubRecognitionService @Inject constructor() : ItemRecognitionService {
         return RecognitionResult(
             suggestedName = "Scanned Item",
             suggestedCategory = "Uncategorized",
-            confidence = 0.5f
+            confidence = 0.5f,
+            isContainer = false
         )
     }
 }
