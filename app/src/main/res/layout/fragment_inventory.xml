@@ -41,10 +41,22 @@
         android:id="@+id/btn_visual_search"
         android:layout_width="48dp"
         android:layout_height="48dp"
-        android:layout_marginEnd="16dp"
+        android:layout_marginEnd="8dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="Visual Search"
         android:src="@android:drawable/ic_menu_camera"
+        app:layout_constraintBottom_toBottomOf="@id/search_layout"
+        app:layout_constraintEnd_toStartOf="@id/btn_clear_data"
+        app:layout_constraintTop_toTopOf="@id/search_layout" />
+
+    <ImageButton
+        android:id="@+id/btn_clear_data"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginEnd="16dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Clear All Data"
+        android:src="@android:drawable/ic_menu_delete"
         app:layout_constraintBottom_toBottomOf="@id/search_layout"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/search_layout" />

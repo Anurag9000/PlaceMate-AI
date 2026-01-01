@@ -39,6 +39,15 @@ interface InventoryDao {
 
     @Query("SELECT i.* FROM items i JOIN item_placements p ON i.id = p.itemId WHERE p.locationId = :locationId")
     suspend fun getItemsForLocation(locationId: String): List<ItemEntity>
+
+    @Query("SELECT COUNT(*) FROM items")
+    suspend fun getItemCount(): Int
+
+    @Query("DELETE FROM items")
+    suspend fun deleteAllItems()
+
+    @Query("DELETE FROM item_placements")
+    suspend fun deleteAllPlacements()
 }
 
 @Dao
@@ -46,8 +55,14 @@ interface LocationDao {
     @Query("SELECT * FROM locations")
     fun getAllLocations(): Flow<List<LocationEntity>>
 
+    @Query("SELECT * FROM locations")
+    suspend fun getAllLocationsSync(): List<LocationEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLocation(location: LocationEntity)
+
+    @Query("DELETE FROM locations")
+    suspend fun deleteAllLocations()
 
     @Query("SELECT * FROM locations WHERE parentId = :parentId")
     fun getChildren(parentId: String): Flow<List<LocationEntity>>

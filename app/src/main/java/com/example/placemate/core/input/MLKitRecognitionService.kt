@@ -11,6 +11,9 @@ import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
 
+import com.google.mlkit.vision.objects.ObjectDetection
+import com.google.mlkit.vision.objects.defaults.ObjectDetectorOptions
+
 @Singleton
 class MLKitRecognitionService @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -18,6 +21,13 @@ class MLKitRecognitionService @Inject constructor(
 ) : ItemRecognitionService {
 
     private val labeler = ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS)
+    private val objectDetector = ObjectDetection.getClient(
+        ObjectDetectorOptions.Builder()
+            .setDetectorMode(ObjectDetectorOptions.SINGLE_IMAGE_MODE)
+            .enableMultipleObjects()
+            .enableClassification()
+            .build()
+    )
 
     override suspend fun recognizeItem(imageUri: Uri): RecognitionResult {
         return try {
@@ -39,6 +49,43 @@ class MLKitRecognitionService @Inject constructor(
             }
         } catch (e: Exception) {
             RecognitionResult(null, null, 0f)
+        }
+    }
+
+    override suspend fun recognizeScene(imageUri: Uri): SceneRecognitionResult {
+        return try {
+            val image = InputImage.fromFilePath(context, imageUri)
+            
+            // 1. Get Scene Context (e.g. "Living Room") via Labeler
+            val labels = labeler.process(image).await()
+            val sceneContext = labels.find { label ->
+                val text = label.text.lowercase()
+                text.contains("room") || text.contains("kitchen") || text.contains("office") || text.contains("garage")
+            }?.text?.replaceFirstChar { it.uppercase() }
+
+            // 2. Get Specific Objects via Detector
+            val detectedObjects = objectDetector.process(image).await()
+            
+            val recognized = mutableListOf<RecognizedObject>()
+            
+            // Add the scene context if found as a container
+            sceneContext?.let {
+                recognized.add(RecognizedObject(it, true, 0.9f)) // Treat room as root container
+            }
+
+            detectedObjects.forEach { obj ->
+                val label = obj.labels.firstOrNull()?.text ?: "Object"
+                val normalized = synonymManager.getRepresentativeName(label)
+                recognized.add(RecognizedObject(
+                    label = normalized.replaceFirstChar { it.uppercase() },
+                    isContainer = isLabelContainer(normalized),
+                    confidence = obj.labels.firstOrNull()?.confidence ?: 0.5f,
+                    boundingBox = obj.boundingBox
+                ))
+            }
+            SceneRecognitionResult(recognized)
+        } catch (e: Exception) {
+            SceneRecognitionResult(emptyList())
         }
     }
 

@@ -43,5 +43,23 @@ class InventoryRepository @Inject constructor(
         }
         return path.joinToString(" > ")
     }
-    suspend fun getItemsForLocation(locationId: String): List<ItemEntity> = inventoryDao.getItemsForLocation(locationId)
+    suspend fun getItemsForLocation(locationId: String): List<ItemEntity> {
+        return inventoryDao.getItemsForLocation(locationId)
+    }
+
+    suspend fun nukeData() {
+        inventoryDao.deleteAllPlacements()
+        inventoryDao.deleteAllItems()
+        locationDao.deleteAllLocations()
+    }
+
+    suspend fun getAllLocationsSync(): List<LocationEntity>? {
+        return locationDao.getAllLocationsSync()
+    }
+
+    suspend fun addLocationSync(name: String, type: LocationType, parentId: String?): LocationEntity {
+        val location = LocationEntity(name = name, type = type, parentId = parentId)
+        locationDao.insertLocation(location)
+        return location
+    }
 }

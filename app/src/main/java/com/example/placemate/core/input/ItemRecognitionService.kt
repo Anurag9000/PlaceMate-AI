@@ -6,6 +6,7 @@ import javax.inject.Singleton
 
 interface ItemRecognitionService {
     suspend fun recognizeItem(imageUri: Uri): RecognitionResult
+    suspend fun recognizeScene(imageUri: Uri): SceneRecognitionResult
 }
 
 data class RecognitionResult(
@@ -15,16 +16,34 @@ data class RecognitionResult(
     val isContainer: Boolean = false
 )
 
+data class RecognizedObject(
+    val label: String,
+    val isContainer: Boolean,
+    val confidence: Float,
+    val boundingBox: android.graphics.Rect? = null
+)
+
+data class SceneRecognitionResult(
+    val objects: List<RecognizedObject>
+)
+
 @Singleton
 class StubRecognitionService @Inject constructor() : ItemRecognitionService {
     override suspend fun recognizeItem(imageUri: Uri): RecognitionResult {
-        // In a real app, this would use ML Kit or a Cloud API.
-        // For the stub, we return a generic "Object" suggestion.
         return RecognitionResult(
             suggestedName = "Scanned Item",
             suggestedCategory = "Uncategorized",
             confidence = 0.5f,
             isContainer = false
+        )
+    }
+
+    override suspend fun recognizeScene(imageUri: Uri): SceneRecognitionResult {
+        return SceneRecognitionResult(
+            objects = listOf(
+                RecognizedObject("Item 1", false, 0.9f),
+                RecognizedObject("Shelf", true, 0.8f)
+            )
         )
     }
 }

@@ -63,29 +63,22 @@ class InventoryFragment : Fragment() {
             photoFile?.let { file ->
                 viewLifecycleOwner.lifecycleScope.launch {
                     val uri = android.net.Uri.fromFile(file)
-                    val result = recognitionService.recognizeItem(uri)
-
-                    if (result.isContainer) {
-                        android.app.AlertDialog.Builder(requireContext())
-                            .setTitle("Location Detected")
-                            .setMessage("I detected a '${result.suggestedName}'. Do you want to add this as a new Location?")
-                            .setPositiveButton("Add Location") { _, _ ->
-                                val bundle = Bundle().apply { 
-                                    putString("openAddDialogName", result.suggestedName)
-                                }
-                                findNavController().navigate(R.id.nav_locations, bundle)
-                            }
-                            .setNegativeButton("Search as Item") { _, _ ->
-                                result.suggestedName?.let { name ->
-                                    binding.searchEditText.setText(name)
-                                    viewModel.updateSearchQuery(name)
-                                }
-                            }
-                            .show()
+                    
+                    // NEW: Use Scene Recognition for holistic room scan
+                    val sceneResult = recognitionService.recognizeScene(uri)
+                    
+                    if (sceneResult.objects.size > 1) {
+                        viewModel.syncScene(sceneResult)
+                        android.widget.Toast.makeText(requireContext(), 
+                            "Scene scanned! Syncing ${sceneResult.objects.size} objects...", 
+                            android.widget.Toast.LENGTH_LONG).show()
                     } else {
-                        result.suggestedName?.let { name ->
-                            binding.searchEditText.setText(name)
-                            viewModel.updateSearchQuery(name)
+                        // Fallback to single item if only 1 object found
+                        val result = recognitionService.recognizeItem(uri)
+                        if (result.isContainer) {
+                            showContainerDetectionDialog(result)
+                        } else {
+                            handleSingleItemDetection(result)
                         }
                     }
                 }
@@ -129,6 +122,10 @@ class InventoryFragment : Fragment() {
             startVisualSearch()
         }
 
+        binding.btnClearData.setOnClickListener {
+            showClearDataConfirmation()
+        }
+
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.items.collect { items ->
@@ -141,6 +138,29 @@ class InventoryFragment : Fragment() {
         arguments?.getString("searchQuery")?.let { query ->
             binding.searchEditText.setText(query)
             viewModel.updateSearchQuery(query)
+        }
+    }
+
+    private fun showContainerDetectionDialog(result: com.example.placemate.core.input.RecognitionResult) {
+        android.app.AlertDialog.Builder(requireContext())
+            .setTitle("Location Detected")
+            .setMessage("I detected a '${result.suggestedName}'. Do you want to add this as a new Location?")
+            .setPositiveButton("Add Location") { _, _ ->
+                val bundle = Bundle().apply { 
+                    putString("openAddDialogName", result.suggestedName)
+                }
+                findNavController().navigate(R.id.nav_locations, bundle)
+            }
+            .setNegativeButton("Search as Item") { _, _ ->
+                handleSingleItemDetection(result)
+            }
+            .show()
+    }
+
+    private fun handleSingleItemDetection(result: com.example.placemate.core.input.RecognitionResult) {
+        result.suggestedName?.let { name ->
+            binding.searchEditText.setText(name)
+            viewModel.updateSearchQuery(name)
         }
     }
 
@@ -189,6 +209,17 @@ class InventoryFragment : Fragment() {
             }
 
         }
+    }
+
+    private fun showClearDataConfirmation() {
+        android.app.AlertDialog.Builder(requireContext())
+            .setTitle("Clear All Data")
+            .setMessage("This will permanently delete ALL items and locations. Are you sure?")
+            .setPositiveButton("Clear Everything") { _, _ ->
+                viewModel.clearAllData()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     override fun onDestroyView() {
