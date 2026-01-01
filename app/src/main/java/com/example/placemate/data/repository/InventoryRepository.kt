@@ -4,6 +4,7 @@ import com.example.placemate.data.local.dao.InventoryDao
 import com.example.placemate.data.local.dao.LocationDao
 import com.example.placemate.data.local.entities.ItemEntity
 import com.example.placemate.data.local.entities.LocationEntity
+import com.example.placemate.data.local.entities.LocationType
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton

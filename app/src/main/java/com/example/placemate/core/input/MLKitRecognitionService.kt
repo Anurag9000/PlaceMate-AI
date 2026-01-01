@@ -13,6 +13,7 @@ import javax.inject.Singleton
 
 import com.google.mlkit.vision.objects.ObjectDetection
 import com.google.mlkit.vision.objects.defaults.ObjectDetectorOptions
+import com.google.mlkit.vision.objects.DetectedObject
 
 @Singleton
 class MLKitRecognitionService @Inject constructor(
@@ -64,7 +65,7 @@ class MLKitRecognitionService @Inject constructor(
             }?.text?.replaceFirstChar { it.uppercase() }
 
             // 2. Get Specific Objects via Detector
-            val detectedObjects = objectDetector.process(image).await()
+            val detectedObjects: List<DetectedObject> = objectDetector.process(image).await()
             
             val recognized = mutableListOf<RecognizedObject>()
             
@@ -73,7 +74,7 @@ class MLKitRecognitionService @Inject constructor(
                 recognized.add(RecognizedObject(it, true, 0.9f)) // Treat room as root container
             }
 
-            detectedObjects.forEach { obj ->
+            for (obj in detectedObjects) {
                 val label = obj.labels.firstOrNull()?.text ?: "Object"
                 val normalized = synonymManager.getRepresentativeName(label)
                 recognized.add(RecognizedObject(

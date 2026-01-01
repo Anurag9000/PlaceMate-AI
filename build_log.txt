@@ -1,0 +1,24 @@
+
+> Configure project :app
+e: file:///D:/Research_projects/PLACEMATE/app/build.gradle.kts:69:37: Expecting a class body
+
+FAILURE: Build failed with an exception.
+
+* Where:
+Build file 'D:\Research_projects\PLACEMATE\app\build.gradle.kts' line: 69
+
+* What went wrong:
+Script compilation error:
+
+  Line 69:     implementation(libs.mlkit.object.detection)
+                                               ^ Expecting a class body
+
+1 error
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 3s

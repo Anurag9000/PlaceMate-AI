@@ -66,6 +66,7 @@ dependencies {
 
     // ML Kit
     implementation(libs.mlkit.image.labeling)
+    implementation(libs.mlkit.od.detector)
 
     // WorkManager
     implementation(libs.androidx.work.runtime.ktx)

@@ -61,10 +61,7 @@ class InventoryViewModel @Inject constructor(
                     description = "Auto-detected from scene scan",
                     photoUri = null
                 )
-                repository.insertItem(itemEntity)
-                targetLocation?.let {
-                    repository.insertPlacement(ItemPlacementEntity(itemEntity.id, it.id))
-                }
+                repository.saveItem(itemEntity, targetLocation?.id)
             }
         }
     }
