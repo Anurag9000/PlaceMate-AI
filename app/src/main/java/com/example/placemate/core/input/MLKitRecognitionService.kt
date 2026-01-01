@@ -55,6 +55,7 @@ class MLKitRecognitionService @Inject constructor(
     private fun isLabelContainer(label: String): Boolean {
         val lower = label.lowercase()
         return lower.contains("shelf") || 
+               lower.contains("bookcase") ||
                lower.contains("cupboard") || 
                lower.contains("wardrobe") || 
                lower.contains("fridge") || 
