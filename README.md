@@ -12,10 +12,16 @@ PlaceMate is a multimodal, AI-powered inventory and location manager. It allows 
 ### 2. Multi-Modal Searching (The "Scan" Flow)
 You can find where things are kept using our intelligent search:
 
-#### **📸 Visual Search (Scan a Place)**
-- On the **Inventory** or **Locations** tab, tap the **Camera Icon** in the search bar.
-- Photograph a location (e.g., a "Shelf" or "Drawer").
-- **AI Logic:** The app identifies the location and filters the list to show **exactly what objects are stored there in detail**.
+#### **📸 Scene AI (One-Click Room Scan)**
+- On the **Inventory** screen, tap the **Eye Icon** (Scene Scan) in the search bar.
+- Photograph an **entire room** (e.g., your Kitchen or Living Room).
+- **Spatial Intelligence:** The AI identifies the **Room**, all individual **Shelves/Containers**, and the **Items** sitting on those shelves.
+- **Auto-Hierarchy:** It automatically builds the structure live: `Room > Container > Item`. It uses bounding box geometry to ensure items are placed in the correct shelf exactly as seen in the photo!
+
+#### **🔍 Visual Search (Single Item/Location)**
+- Tap the **Camera Icon** in the search bar.
+- Photograph a single object or location.
+- **AI Logic:** The app identifies the object/location and filters your inventory to show details or storage contents.
 
 #### **🎙️ Voice Search**
 - Tap the **Microphone Icon** in the search bar.
@@ -23,6 +29,11 @@ You can find where things are kept using our intelligent search:
 - **🧠 Semantic Intelligence (Synonyms):** The app understands synonyms. If you say *"Show me the lounge"*, it automatically knows you mean the **"Living Room"** and filters accordingly.
 
 ---
+
+## 🛠️ Data Integrity & Maintenance
+- **Structural Integrity:** The database (Version 2) enforces **Unique Constraints**. Duplicate item names or repeated locations are blocked at the architectural level.
+- **Deterministic Seeding:** No more "Harry Potter x8"—seeding uses fixed IDs to ensure your initial setup is always lean and singular.
+- **Manual Cleanup:** Use the **Red Trash Icon** to wipe all data and start fresh if needed.
 
 ## ✨ Semantic Intelligence & Synonyms
 We have implemented a `SynonymManager` that bridges the gap between different ways humans talk:
