@@ -73,6 +73,10 @@ class ItemDetailViewModel @Inject constructor(
     }
 
     fun deleteItem() {
-        // ... handled elsewhere for now
+        val currentItem = _item.value ?: return
+        viewModelScope.launch {
+            inventoryRepository.deleteItem(currentItem)
+            _item.value = null
+        }
     }
 }

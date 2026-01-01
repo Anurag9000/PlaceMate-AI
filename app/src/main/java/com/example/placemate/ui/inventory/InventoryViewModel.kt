@@ -42,17 +42,29 @@ class InventoryViewModel @Inject constructor(
                 ?: repository.addLocationSync(roomLabel, LocationType.ROOM, null)
 
             // 2. Identify containers (Shelves, Tables, Almirahs)
-            val containers = objects.filter { it.isContainer && it.label != roomLabel }
-            val containerEntities = containers.map { cont ->
-                currentLocations?.find { it.name.equals(cont.label, true) && it.parentId == parentLocation.id }
+            val containerObjects = objects.filter { it.isContainer && it.label != roomLabel }
+            val containerMap = containerObjects.map { cont ->
+                val entity = currentLocations?.find { it.name.equals(cont.label, true) && it.parentId == parentLocation.id }
                     ?: repository.addLocationSync(cont.label, LocationType.STORAGE, parentLocation.id)
+                cont to entity
             }
 
-            // 3. Identify items and place them in the nearest container or the room
+            // 3. Identify items and place them in the correct spatial container
             val items = objects.filter { !it.isContainer && !it.label.contains("Room", true) }
             items.forEach { item ->
-                // Logic: if we found a container, put it there. Otherwise, put in the room.
-                val targetLocation = containerEntities.firstOrNull() ?: parentLocation
+                // Find the best container by spatial containment
+                val targetLocation = item.boundingBox?.let { itemRect ->
+                    val centerX = itemRect.centerX()
+                    val centerY = itemRect.centerY()
+                    
+                    containerMap.filter { (contObj, _) ->
+                        contObj.boundingBox?.contains(centerX, centerY) == true
+                    }.minByOrNull { (contObj, _) -> 
+                        // Pick the smallest containing box (most specific)
+                        val r = contObj.boundingBox!!
+                        r.width() * r.height()
+                    }?.second
+                } ?: parentLocation
                 
                 val itemEntity = ItemEntity(
                     name = item.label,

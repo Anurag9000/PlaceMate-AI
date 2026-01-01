@@ -48,6 +48,18 @@ class ItemDetailFragment : Fragment() {
             }
         }
 
+        binding.btnDelete.setOnClickListener {
+            android.app.AlertDialog.Builder(requireContext())
+                .setTitle("Delete Item")
+                .setMessage("Are you sure you want to delete this item?")
+                .setPositiveButton("Delete") { _, _ ->
+                    viewModel.deleteItem()
+                    findNavController().popBackStack()
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
+
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
