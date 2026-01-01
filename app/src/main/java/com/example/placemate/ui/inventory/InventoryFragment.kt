@@ -13,9 +13,11 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.placemate.R
-import com.example.placemate.databinding.FragmentInventoryBinding
+import com.example.placemate.core.input.ItemRecognitionService
+import com.example.placemate.core.utils.ImageUtils
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import java.io.File
 
 @AndroidEntryPoint
 class InventoryFragment : Fragment() {
@@ -27,6 +29,28 @@ class InventoryFragment : Fragment() {
 
     @javax.inject.Inject
     lateinit var speechManager: com.example.placemate.core.input.SpeechManager
+
+    @javax.inject.Inject
+    lateinit var recognitionService: ItemRecognitionService
+
+    private var photoFile: File? = null
+
+    private val takePictureLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            photoFile?.let { file ->
+                viewLifecycleOwner.lifecycleScope.launch {
+                    val uri = android.net.Uri.fromFile(file)
+                    val result = recognitionService.recognizeItem(uri)
+                    result.suggestedName?.let { name ->
+                        binding.searchEditText.setText(name)
+                        viewModel.updateSearchQuery(name)
+                    }
+                }
+            }
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -60,6 +84,10 @@ class InventoryFragment : Fragment() {
             startSpeechSearch()
         }
 
+        binding.btnVisualSearch.setOnClickListener {
+            startVisualSearch()
+        }
+
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.items.collect { items ->
@@ -67,6 +95,12 @@ class InventoryFragment : Fragment() {
                 }
             }
         }
+    }
+
+    private fun startVisualSearch() {
+        photoFile = ImageUtils.createImageFile(requireContext())
+        val uri = ImageUtils.getContentUri(requireContext(), photoFile!!)
+        takePictureLauncher.launch(uri)
     }
 
     private fun startSpeechSearch() {
