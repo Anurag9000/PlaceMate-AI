@@ -38,7 +38,7 @@ class OnboardingFragment : Fragment() {
 
         binding.tvSkipOnboarding.setOnClickListener {
             configManager.setOnboardingCompleted(true)
-            findNavController().navigate(R.id.nav_settings)
+            findNavController().navigate(R.id.action_onboarding_to_settings)
         }
     }
 

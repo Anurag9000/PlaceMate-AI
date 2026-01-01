@@ -32,6 +32,11 @@
             app:destination="@id/nav_home"
             app:popUpTo="@id/nav_onboarding"
             app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_onboarding_to_settings"
+            app:destination="@id/nav_settings"
+            app:popUpTo="@id/nav_onboarding"
+            app:popUpToInclusive="true" />
     </fragment>
 
     <fragment
