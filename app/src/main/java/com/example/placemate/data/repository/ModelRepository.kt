@@ -52,20 +52,9 @@ class ModelRepository @Inject constructor() {
                     val version = modelJson.optString("version")
                     val supportedMethods = modelJson.optJSONArray("supportedGenerationMethods")
 
-                    // Filter for models that support content generation
-                    var supportsGenerateContent = false
-                    if (supportedMethods != null) {
-                        for (j in 0 until supportedMethods.length()) {
-                            if (supportedMethods.getString(j) == "generateContent") {
-                                supportsGenerateContent = true
-                                break
-                            }
-                        }
-                    }
-
-                    if (supportsGenerateContent) {
-                        models.add(GeminiModel(name, displayName, version, description))
-                    }
+                    // Filter relaxed: Show all models, let user decide or fail later if method unsupported.
+                    // Often "generateContent" isn't explicitly listed in the lightweight response for some keys/regions.
+                    models.add(GeminiModel(name, displayName, version, description))
                 }
             } else {
                 android.util.Log.e("ModelRepo", "Error fetching models: $responseCode")

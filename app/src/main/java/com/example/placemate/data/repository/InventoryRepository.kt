@@ -20,6 +20,8 @@ class InventoryRepository @Inject constructor(
 
     suspend fun getItemById(id: String): ItemEntity? = inventoryDao.getItemById(id)
 
+    suspend fun getAllItemsSync(): List<ItemEntity> = inventoryDao.getAllItemsSync()
+
     suspend fun saveItem(item: ItemEntity, locationId: String? = null) {
         inventoryDao.insertItem(item)
         locationId?.let {
