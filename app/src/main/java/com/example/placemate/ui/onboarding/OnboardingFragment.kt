@@ -16,6 +16,9 @@ class OnboardingFragment : Fragment() {
     private var _binding: FragmentOnboardingBinding? = null
     private val binding get() = _binding!!
 
+    @javax.inject.Inject
+    lateinit var configManager: com.example.placemate.core.utils.ConfigManager
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -29,10 +32,12 @@ class OnboardingFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         binding.btnGetStarted.setOnClickListener {
+            configManager.setOnboardingCompleted(true)
             findNavController().navigate(R.id.action_onboarding_to_home)
         }
 
         binding.tvSkipOnboarding.setOnClickListener {
+            configManager.setOnboardingCompleted(true)
             findNavController().navigate(R.id.nav_settings)
         }
     }
