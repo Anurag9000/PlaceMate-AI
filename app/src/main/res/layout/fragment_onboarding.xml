@@ -12,11 +12,11 @@
         android:layout_width="120dp"
         android:layout_height="120dp"
         android:layout_marginTop="64dp"
-        android:src="@android:drawable/ic_menu_search"
+        android:src="@drawable/ic_logo_placemate"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:tint="@color/primary_accent" />
+        app:tint="@null" />
 
     <TextView
         android:id="@+id/tv_onboarding_title"
