@@ -13,7 +13,8 @@ data class RecognitionResult(
     val suggestedName: String?,
     val suggestedCategory: String?,
     val confidence: Float,
-    val isContainer: Boolean = false
+    val isContainer: Boolean = false,
+    val errorMessage: String? = null
 )
 
 data class RecognizedObject(
@@ -26,7 +27,8 @@ data class RecognizedObject(
 )
 
 data class SceneRecognitionResult(
-    val objects: List<RecognizedObject>
+    val objects: List<RecognizedObject>,
+    val errorMessage: String? = null
 )
 
 @Singleton

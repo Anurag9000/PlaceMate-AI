@@ -40,6 +40,9 @@ class InventoryFragment : Fragment() {
     @javax.inject.Inject
     lateinit var categoryManager: com.example.placemate.core.utils.CategoryManager
 
+    @javax.inject.Inject
+    lateinit var configManager: com.example.placemate.core.utils.ConfigManager
+
     private var photoFile: File? = null
     private var pendingIsScene: Boolean = false
 
@@ -69,7 +72,9 @@ class InventoryFragment : Fragment() {
                     val uri = android.net.Uri.fromFile(file)
                     val result = recognitionService.recognizeItem(uri)
 
-                    if (result.isContainer) {
+                    if (result.errorMessage != null) {
+                        showErrorDialog("Recognition Error", result.errorMessage)
+                    } else if (result.isContainer) {
                         showContainerDetectionDialog(result)
                     } else {
                         handleSingleItemDetection(result)
@@ -88,16 +93,18 @@ class InventoryFragment : Fragment() {
                     val uri = android.net.Uri.fromFile(file)
                     val sceneResult = recognitionService.recognizeScene(uri)
                     
-                    if (sceneResult.objects.isNotEmpty()) {
+                    if (sceneResult.errorMessage != null) {
+                        showErrorDialog("Scan Error", sceneResult.errorMessage)
+                    } else if (sceneResult.objects.isNotEmpty()) {
                         viewModel.syncScene(requireContext(), sceneResult, uri)
                         android.widget.Toast.makeText(requireContext(), 
                             "Scene scanned! Created Room and found ${sceneResult.objects.count { !it.isContainer }} items.", 
                             android.widget.Toast.LENGTH_LONG).show()
                     } else {
-                        // Even if 0 objects found, try to add it as a "New Room"
+                        // Truly 0 objects found by the AI
                         android.app.AlertDialog.Builder(requireContext())
                             .setTitle("No Objects Detected")
-                            .setMessage("I couldn't identify specific objects. Do you want to add this photo as a generic 'New Room'?")
+                            .setMessage("The AI couldn't identify specific objects in this photo. Do you want to add this as a generic 'New Room' anyway?")
                             .setPositiveButton("Add Room") { _, _ ->
                                 viewModel.syncScene(requireContext(), com.example.placemate.core.input.SceneRecognitionResult(
                                     listOf(com.example.placemate.core.input.RecognizedObject("New Scanned Room", true, 1.0f))
@@ -225,6 +232,10 @@ class InventoryFragment : Fragment() {
     private fun launchCamera(isScene: Boolean) {
         photoFile = ImageUtils.createImageFile(requireContext())
         val uri = ImageUtils.getContentUri(requireContext(), photoFile!!)
+        
+        val engineName = if (configManager.isGeminiEnabled() && configManager.hasGeminiApiKey()) "Gemini" else "ML Kit"
+        android.widget.Toast.makeText(requireContext(), "Starting $engineName Scan...", android.widget.Toast.LENGTH_SHORT).show()
+
         if (isScene) {
             takeScenePictureLauncher.launch(uri)
         } else {
@@ -267,6 +278,14 @@ class InventoryFragment : Fragment() {
                 viewModel.clearAllData()
             }
             .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showErrorDialog(title: String, message: String) {
+        android.app.AlertDialog.Builder(requireContext())
+            .setTitle(title)
+            .setMessage(message)
+            .setPositiveButton("OK", null)
             .show()
     }
 
