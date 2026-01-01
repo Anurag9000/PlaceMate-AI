@@ -96,7 +96,13 @@ class GeminiRecognitionService @Inject constructor(
             )
         } catch (e: Exception) {
             android.util.Log.e("GeminiService", "Item recognition failed", e)
-            RecognitionResult(null, null, 0f, errorMessage = "Connection failed: ${e.localizedMessage}")
+            val msg = e.localizedMessage ?: "Unknown error"
+            val userMsg = if (msg.contains("serialization", true) || msg.contains("404", true)) {
+                "Model unavailable. Please select a different model in Settings."
+            } else {
+                "Connection failed: $msg"
+            }
+            RecognitionResult(null, null, 0f, errorMessage = userMsg)
         }
     }
 
