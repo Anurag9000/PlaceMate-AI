@@ -32,50 +32,79 @@ class InventoryViewModel @Inject constructor(
             val objects = result.objects
             if (objects.isEmpty()) return@launch
 
-            // 1. Identify valid room/root
-            val roomLabel = objects.find { 
-                val l = it.label.lowercase()
-                l.contains("room") || l.contains("kitchen") || l.contains("office") || l.contains("bedroom")
-            }?.label ?: "Scanned Room"
-            
-            val currentLocations = repository.getAllLocationsSync()
-            val parentLocation = currentLocations?.find { it.name.equals(roomLabel, true) }
-                ?: repository.addLocationSync(roomLabel, LocationType.ROOM, null)
+            val currentLocations = repository.getAllLocationsSync() ?: emptyList()
+            val locationCache = mutableMapOf<String, LocationEntity>()
 
-            // 2. Identify containers
+            // 1. Resolve the Root Room
+            val roomObj = objects.find { 
+                val l = it.label.lowercase()
+                l.contains("room") || l.contains("kitchen") || l.contains("office") || 
+                l.contains("bedroom") || l.contains("garage") || l.contains("basement")
+            } ?: objects.firstOrNull { it.isContainer && it.parentLabel == null }
+            
+            val roomLabel = roomObj?.label ?: "Scanned Room"
+            val roomEntity = currentLocations.find { it.name.equals(roomLabel, true) && it.parentId == null }
+                ?: repository.addLocationSync(roomLabel, LocationType.ROOM, null)
+            
+            locationCache[roomLabel] = roomEntity
+
+            // 2. Identify all storage containers and build hierarchy
+            // Sort by confidence or label density if needed, but here we process all containers
             val containerObjects = objects.filter { it.isContainer && it.label != roomLabel }
-            val containerMap = containerObjects.map { cont ->
-                val entity = currentLocations?.find { it.name.equals(cont.label, true) && it.parentId == parentLocation.id }
-                    ?: repository.addLocationSync(cont.label, LocationType.STORAGE, parentLocation.id)
-                cont to entity
+            
+            // We might need multiple passes if there's deep nesting (e.g. Box in a Shelf)
+            // For simplicity, we'll do up to 3 passes to resolve parents
+            repeat(3) {
+                containerObjects.forEach { cont ->
+                    if (!locationCache.containsKey(cont.label)) {
+                        val parentEntity = cont.parentLabel?.let { pLabel ->
+                            locationCache.entries.find { it.key.equals(pLabel, true) }?.value
+                        } ?: roomEntity // Fallback to room for containers
+
+                        val entity = currentLocations.find { 
+                            it.name.equals(cont.label, true) && it.parentId == parentEntity.id 
+                        } ?: repository.addLocationSync(cont.label, LocationType.STORAGE, parentEntity.id)
+                        
+                        locationCache[cont.label] = entity
+                    }
+                }
             }
 
-            // 3. Identify items and place them spatially
-            val items = objects.filter { !it.isContainer && !it.label.contains("Room", true) }
+            // 3. Process all items
+            val items = objects.filter { !it.isContainer && !it.label.equals(roomLabel, true) }
             items.forEach { item ->
-                val targetLocation = item.boundingBox?.let { itemRect ->
+                // Determine target location
+                val targetLocation = item.parentLabel?.let { pLabel ->
+                    locationCache.entries.find { it.key.equals(pLabel, true) }?.value
+                } ?: item.boundingBox?.let { itemRect ->
+                    // Spatial fallback
                     val centerX = itemRect.centerX()
                     val centerY = itemRect.centerY()
                     
-                    containerMap.filter { (contObj, _) ->
+                    containerObjects.filter { contObj ->
                         contObj.boundingBox?.contains(centerX, centerY) == true
-                    }.minByOrNull { (contObj, _) -> 
+                    }.minByOrNull { contObj -> 
                         val r = contObj.boundingBox!!
                         r.width() * r.height()
-                    }?.second
-                } ?: parentLocation
+                    }?.let { locationCache[it.label] }
+                } ?: roomEntity
 
                 val croppedUri = item.boundingBox?.let { 
                     com.example.placemate.core.utils.ImageUtils.cropAndSave(context, imageUri, it)
                 }
                 
-                val itemEntity = ItemEntity(
-                    name = item.label,
-                    category = categoryManager.mapLabelToCategory(item.label),
-                    description = "Detected in ${parentLocation.name}",
-                    photoUri = croppedUri?.toString()
-                )
-                repository.saveItem(itemEntity, targetLocation.id)
+                // Handle quantity: Create multiple items if quantity > 1
+                val count = if (item.quantity > 0) item.quantity else 1
+                for (i in 1..count) {
+                    val nameSuffix = if (count > 1) " #$i" else ""
+                    val itemEntity = ItemEntity(
+                        name = "${item.label}$nameSuffix",
+                        category = categoryManager.mapLabelToCategory(item.label),
+                        description = "Exhaustively detected on/in ${targetLocation.name}",
+                        photoUri = croppedUri?.toString()
+                    )
+                    repository.saveItem(itemEntity, targetLocation.id)
+                }
             }
         }
     }

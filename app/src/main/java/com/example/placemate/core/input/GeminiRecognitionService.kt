@@ -82,19 +82,30 @@ class GeminiRecognitionService @Inject constructor(
             val height = bitmap.height
 
             val prompt = """
-                Analyze this photo of a room or storage area.
-                1. Identify the room or main context (e.g. "Kitchen", "Garage").
-                2. Identify all storage locations/containers (e.g. "Upper Shelf", "Bottom Drawer", "Countertop").
-                3. Identify all individual items sitting on or in those locations.
+                Extract ALL entities visible in this photo of a room or storage area. 
+                Be EXHAUSTIVE. If there are 50 books, list them individually if possible, or provide a count.
+                Identify the hierarchical relationship: what is "in" or "on" what.
                 
-                For each object, provide its bounding box as [ymin, xmin, ymax, xmax] in normalized coordinates (0-1000).
-                Return ONLY a JSON object in this format:
+                1. Identify the Room (e.g., "Living Room").
+                2. Identify all Furniture and Storage (e.g., "Dining Table", "Sofa", "Bookshelf", "Drawer").
+                3. Identify all smaller items on/in those objects (e.g., "Laptop", "Coffee Mug", "Book: The Great Gatsby").
+                
+                For each object, provide:
+                - label: Descriptive name.
+                - isContainer: True if it can hold other things.
+                - quantity: Number of such items if grouped (default 1).
+                - parentLabel: The name of the object it is sitting ON or INSIDE (e.g., "Dining Table", "Shelf"). Use the Room name as the ultimate parent.
+                - box_2d: [ymin, xmin, ymax, xmax] in normalized coordinates (0-1000).
+                
+                Return ONLY a JSON object:
                 {
                   "objects": [
                     {
                       "label": "string",
                       "isContainer": boolean,
                       "confidence": float,
+                      "quantity": number,
+                      "parentLabel": "string",
                       "box_2d": [number, number, number, number]
                     }
                   ]
@@ -129,7 +140,9 @@ class GeminiRecognitionService @Inject constructor(
                     label = normalized.replaceFirstChar { it.uppercase() },
                     isContainer = categoryManager.isLabelContainer(normalized),
                     confidence = obj.optDouble("confidence", 0.8).toFloat(),
-                    boundingBox = rect
+                    boundingBox = rect,
+                    quantity = obj.optInt("quantity", 1),
+                    parentLabel = obj.optString("parentLabel").takeIf { it.isNotEmpty() }
                 ))
             }
             SceneRecognitionResult(recognized)

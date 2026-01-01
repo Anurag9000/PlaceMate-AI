@@ -20,7 +20,9 @@ data class RecognizedObject(
     val label: String,
     val isContainer: Boolean,
     val confidence: Float,
-    val boundingBox: android.graphics.Rect? = null
+    val boundingBox: android.graphics.Rect? = null,
+    val quantity: Int = 1,
+    val parentLabel: String? = null
 )
 
 data class SceneRecognitionResult(
