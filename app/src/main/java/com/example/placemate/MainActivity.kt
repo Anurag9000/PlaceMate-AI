@@ -21,9 +21,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var binding: ActivityMainBinding
 
-    @javax.inject.Inject
-    lateinit var configManager: com.example.placemate.core.utils.ConfigManager
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -34,11 +31,6 @@ class MainActivity : AppCompatActivity() {
         val navHostFragment =
             (supportFragmentManager.findFragmentById(R.id.nav_host_fragment_content_main) as NavHostFragment?)!!
         val navController = navHostFragment.navController
-
-        // Check if onboarding is completed, if not navigate to onboarding
-        if (!configManager.isOnboardingCompleted() && savedInstanceState == null) {
-            navController.navigate(R.id.nav_onboarding)
-        }
 
         binding.navView?.let {
             appBarConfiguration = AppBarConfiguration(
