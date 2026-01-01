@@ -31,6 +31,20 @@ class SeedDataInitializer @Inject constructor(
             locationDao.insertLocation(livingRoom)
             locationDao.insertLocation(kitchen)
             locationDao.insertLocation(bedroom)
+
+            // Sample Items
+            val items = listOf(
+                ItemEntity(id = "item_1", name = "MacBook Pro", category = "Electronics", description = "Work laptop", photoUri = null),
+                ItemEntity(id = "item_2", name = "French Press", category = "Kitchen", description = "For morning coffee", photoUri = null),
+                ItemEntity(id = "item_3", name = "Yoga Mat", category = "Fitness", description = "Relaxation", photoUri = null)
+            )
+
+            items.forEach { inventoryDao.insertItem(it) }
+
+            // Placements
+            inventoryDao.insertPlacement(com.example.placemate.data.local.entities.ItemPlacementEntity("item_1", "seed_living_room"))
+            inventoryDao.insertPlacement(com.example.placemate.data.local.entities.ItemPlacementEntity("item_2", "seed_kitchen"))
+            inventoryDao.insertPlacement(com.example.placemate.data.local.entities.ItemPlacementEntity("item_3", "seed_bedroom"))
         }
     }
 }
