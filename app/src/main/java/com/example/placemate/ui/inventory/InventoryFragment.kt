@@ -33,7 +33,11 @@ class InventoryFragment : Fragment() {
     @javax.inject.Inject
     lateinit var recognitionService: ItemRecognitionService
 
+    @javax.inject.Inject
+    lateinit var synonymManager: com.example.placemate.core.utils.SynonymManager
+
     private var photoFile: File? = null
+
 
     private val takePictureLauncher = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.TakePicture()
@@ -107,10 +111,12 @@ class InventoryFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             speechManager.startListening().collect { state ->
                 if (state is com.example.placemate.core.input.SpeechState.Result) {
-                    binding.searchEditText.setText(state.text)
-                    viewModel.updateSearchQuery(state.text)
+                    val normalizedText = synonymManager.getRepresentativeName(state.text)
+                    binding.searchEditText.setText(state.text) // Keep original text in UI
+                    viewModel.updateSearchQuery(normalizedText) // Search with normalized term
                 }
             }
+
         }
     }
 

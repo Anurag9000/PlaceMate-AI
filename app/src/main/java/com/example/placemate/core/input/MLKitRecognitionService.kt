@@ -13,7 +13,8 @@ import javax.inject.Singleton
 
 @Singleton
 class MLKitRecognitionService @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val synonymManager: com.example.placemate.core.utils.SynonymManager
 ) : ItemRecognitionService {
 
     private val labeler = ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS)
@@ -25,11 +26,13 @@ class MLKitRecognitionService @Inject constructor(
             
             if (labels.isNotEmpty()) {
                 val bestLabel = labels[0]
+                val normalizedLabel = synonymManager.getRepresentativeName(bestLabel.text)
                 RecognitionResult(
-                    suggestedName = bestLabel.text,
-                    suggestedCategory = mapLabelToCategory(bestLabel.text),
+                    suggestedName = normalizedLabel.replaceFirstChar { it.uppercase() },
+                    suggestedCategory = mapLabelToCategory(normalizedLabel),
                     confidence = bestLabel.confidence
                 )
+
             } else {
                 RecognitionResult(null, null, 0f)
             }
