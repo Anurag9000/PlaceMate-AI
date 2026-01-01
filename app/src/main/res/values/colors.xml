@@ -18,4 +18,5 @@
     <color name="text_muted">#94A3B8</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="divider">#334155</color>
 </resources>
