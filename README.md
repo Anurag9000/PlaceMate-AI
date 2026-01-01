@@ -17,6 +17,12 @@ You can find where things are kept using our intelligent search:
 - Photograph an **entire room** (e.g., your Kitchen or Living Room).
 - **Spatial Intelligence:** The AI identifies the **Room**, all individual **Shelves/Containers**, and the **Items** sitting on those shelves.
 - **Auto-Hierarchy:** It automatically builds the structure live: `Room > Container > Item`. It uses bounding box geometry to ensure items are placed in the correct shelf exactly as seen in the photo!
+- **🖼️ Cropped Thumbnails:** The app now automatically crops small "object thumbnails" out of the big room photo. Your inventory list now shows exactly what each item looks like, rather than just a blank box!
+
+#### **📝 Full Editability & Manual Refinement**
+- **Correct the AI:** All fields (Name, Category, Notes) are now fully editable in the **Item Detail** screen.
+- **Update Photos:** Click the **Camera FAB** on any item to update its photo or add a higher-quality close-up.
+- **Save Changes:** Simply click the **Save Changes** button to lock in your manual refinements.
 
 #### **🔍 Visual Search (Single Item/Location)**
 - Tap the **Camera Icon** in the search bar.
