@@ -96,7 +96,30 @@ class InventoryViewModel @Inject constructor(
                 
                 // Handle quantity: Create multiple items if quantity > 1
                 val count = if (item.quantity > 0) item.quantity else 1
+                for (i in 1..count) {
+                    var baseName = item.label
+                    if (count > 1) baseName += " #$i"
+                    
+                    // Uniquify: Check if finalName is already in existingItems.
+                    // If so, loop until we find a free suffix.
+                    var finalName = baseName
+                    var suffix = 1
+                    while (existingItems.contains(finalName)) {
+                        suffix++
+                        finalName = "$baseName ($suffix)"
+                    }
+                    
+                    existingItems.add(finalName) // Add to set so next iteration respects it
+
+                    val itemEntity = ItemEntity(
+                        name = finalName,
+                        category = categoryManager.mapLabelToCategory(item.label),
+                        description = "Detected in ${targetLocation.name}",
+                        photoUri = croppedUri?.toString()
+                    )
+                    repository.saveItem(itemEntity, targetLocation.id)
                 }
+
             }
         }
     }
