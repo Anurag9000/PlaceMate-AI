@@ -15,7 +15,7 @@ class ConfigManager @Inject constructor(
         .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
         .build()
 
-    private val sharedPreferences = EncryptedSharedPreferences.create(
+    private val securePrefs = EncryptedSharedPreferences.create(
         context,
         "secure_prefs",
         masterKey,
@@ -23,12 +23,14 @@ class ConfigManager @Inject constructor(
         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
     )
 
+    private val standardPrefs = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+
     fun saveGeminiApiKey(apiKey: String) {
-        sharedPreferences.edit().putString(KEY_GEMINI_API_KEY, apiKey).apply()
+        securePrefs.edit().putString(KEY_GEMINI_API_KEY, apiKey).apply()
     }
 
     fun getGeminiApiKey(): String? {
-        return sharedPreferences.getString(KEY_GEMINI_API_KEY, null)
+        return securePrefs.getString(KEY_GEMINI_API_KEY, null)
     }
 
     fun hasGeminiApiKey(): Boolean {
@@ -36,27 +38,27 @@ class ConfigManager @Inject constructor(
     }
 
     fun setUseGemini(enabled: Boolean) {
-        sharedPreferences.edit().putBoolean(KEY_USE_GEMINI, enabled).apply()
+        standardPrefs.edit().putBoolean(KEY_USE_GEMINI, enabled).apply()
     }
 
     fun isGeminiEnabled(): Boolean {
-        return sharedPreferences.getBoolean(KEY_USE_GEMINI, false)
+        return standardPrefs.getBoolean(KEY_USE_GEMINI, false)
     }
 
     fun isOnboardingCompleted(): Boolean {
-        return sharedPreferences.getBoolean(KEY_ONBOARDING_COMPLETED, false)
+        return standardPrefs.getBoolean(KEY_ONBOARDING_COMPLETED, false)
     }
 
     fun setOnboardingCompleted(completed: Boolean) {
-        sharedPreferences.edit().putBoolean(KEY_ONBOARDING_COMPLETED, completed).apply()
+        standardPrefs.edit().putBoolean(KEY_ONBOARDING_COMPLETED, completed).apply()
     }
 
     fun getSelectedGeminiModel(): String {
-        return sharedPreferences.getString(KEY_SELECTED_GEMINI_MODEL, "gemini-1.5-flash") ?: "gemini-1.5-flash"
+        return standardPrefs.getString(KEY_SELECTED_GEMINI_MODEL, "gemini-1.5-flash") ?: "gemini-1.5-flash"
     }
 
     fun setSelectedGeminiModel(model: String) {
-        sharedPreferences.edit().putString(KEY_SELECTED_GEMINI_MODEL, model).apply()
+        standardPrefs.edit().putString(KEY_SELECTED_GEMINI_MODEL, model).apply()
     }
 
     companion object {
