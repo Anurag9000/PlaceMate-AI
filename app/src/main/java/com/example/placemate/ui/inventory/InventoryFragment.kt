@@ -13,6 +13,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.placemate.R
+import com.example.placemate.databinding.FragmentInventoryBinding
 import com.example.placemate.core.input.ItemRecognitionService
 import com.example.placemate.core.utils.ImageUtils
 import dagger.hilt.android.AndroidEntryPoint
