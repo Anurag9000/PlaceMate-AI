@@ -25,14 +25,15 @@ class SplashFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        return View(requireContext())
+        // Use the new layout resource
+        return inflater.inflate(R.layout.fragment_splash, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
         viewLifecycleOwner.lifecycleScope.launch {
-            delay(100) // Brief delay to ensure smooth transition
+            delay(1500) // Branding moment
             
             val destination = if (configManager.isOnboardingCompleted()) {
                 R.id.action_splash_to_home

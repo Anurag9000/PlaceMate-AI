@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="gemini_models">
+        <item>gemini-1.5-flash (Fastest &amp; Free)</item>
+        <item>gemini-1.5-pro (More Intelligent)</item>
+        <item>gemini-pro (Legacy Stable)</item>
+    </string-array>
+</resources>

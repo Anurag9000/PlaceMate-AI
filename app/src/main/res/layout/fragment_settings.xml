@@ -38,8 +38,25 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="Use Gemini 1.5 Flash (AI Studio)"
+            android:text="Use Gemini AI (Cloud)"
             android:textAppearance="?attr/textAppearanceSubtitle1" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Select AI Model"
+            android:textAppearance="?attr/textAppearanceCaption"
+            android:textColor="@color/text_muted" />
+
+        <androidx.appcompat.widget.AppCompatSpinner
+            android:id="@+id/spinner_gemini_model"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="4dp"
+            android:background="@drawable/bg_spinner_border"
+            android:padding="8dp"
+            android:entries="@array/gemini_models" />
 
         <TextView
             android:layout_width="match_parent"

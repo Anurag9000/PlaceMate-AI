@@ -49,9 +49,18 @@ class ConfigManager @Inject constructor(
         sharedPreferences.edit().putBoolean(KEY_ONBOARDING_COMPLETED, completed).apply()
     }
 
+    fun getSelectedGeminiModel(): String {
+        return sharedPreferences.getString(KEY_SELECTED_GEMINI_MODEL, "gemini-1.5-flash") ?: "gemini-1.5-flash"
+    }
+
+    fun setSelectedGeminiModel(model: String) {
+        sharedPreferences.edit().putString(KEY_SELECTED_GEMINI_MODEL, model).apply()
+    }
+
     companion object {
         private const val KEY_GEMINI_API_KEY = "gemini_api_key"
         private const val KEY_USE_GEMINI = "use_gemini"
         private const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
+        private const val KEY_SELECTED_GEMINI_MODEL = "selected_gemini_model"
     }
 }

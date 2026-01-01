@@ -55,14 +55,26 @@ class SettingsFragment : Fragment() {
         // Toggle state
         binding.switchUseGemini.isChecked = settingsRepository.isGeminiEnabled()
         binding.layoutApiKey.isEnabled = binding.switchUseGemini.isChecked
+        binding.spinnerGeminiModel.isEnabled = binding.switchUseGemini.isChecked
+
+        // Model Spinner Setup
+        val models = resources.getStringArray(com.example.placemate.R.array.gemini_models)
+        val currentModel = settingsRepository.getSelectedGeminiModel() // Assume this method exists or is added via extension/wrapper
+        val modelIndex = models.indexOfFirst { it.startsWith(currentModel) }
+        if (modelIndex >= 0) {
+            binding.spinnerGeminiModel.setSelection(modelIndex)
+        }
 
         binding.switchUseGemini.setOnCheckedChangeListener { _, isChecked ->
             binding.layoutApiKey.isEnabled = isChecked
+            binding.spinnerGeminiModel.isEnabled = isChecked
         }
 
         binding.btnSaveSettings.setOnClickListener {
             val apiKey = binding.editApiKey.text?.toString() ?: ""
             val useGemini = binding.switchUseGemini.isChecked
+            val selectedModelString = binding.spinnerGeminiModel.selectedItem.toString()
+            val selectedModel = selectedModelString.split(" ")[0] // Extract "gemini-1.5-flash" from "gemini-1.5-flash (Fastest...)"
             
             if (useGemini && apiKey.isBlank()) {
                 Toast.makeText(requireContext(), "Please enter a Gemini API Key to enable it.", Toast.LENGTH_SHORT).show()
@@ -73,7 +85,8 @@ class SettingsFragment : Fragment() {
                 settingsRepository.updateReminderCadence(binding.cadenceSlider.value.toInt())
                 settingsRepository.updateGeminiApiKey(apiKey)
                 settingsRepository.setUseGemini(useGemini)
-                Toast.makeText(requireContext(), "Settings saved!", Toast.LENGTH_SHORT).show()
+                settingsRepository.setSelectedGeminiModel(selectedModel)
+                Toast.makeText(requireContext(), "Settings saved! Using $selectedModel", Toast.LENGTH_SHORT).show()
             }
         }
     }

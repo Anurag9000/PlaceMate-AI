@@ -42,4 +42,10 @@ class SettingsRepository @Inject constructor(
     fun setUseGemini(enabled: Boolean) {
         configManager.setUseGemini(enabled)
     }
+
+    fun getSelectedGeminiModel(): String = configManager.getSelectedGeminiModel()
+
+    fun setSelectedGeminiModel(model: String) {
+        configManager.setSelectedGeminiModel(model)
+    }
 }
