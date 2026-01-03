@@ -71,7 +71,7 @@ class InventoryRepository @Inject constructor(
                 com.example.placemate.ui.inventory.ExplorerItem.File(item)
             }
         } else {
-            emptyList() 
+            emptyList()
         }
 
         return folders + files

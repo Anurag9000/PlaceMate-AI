@@ -70,16 +70,6 @@ class InventoryViewModel @Inject constructor(
                         // Wait, if we fallback to roomEnity immediately, we break the chain if the parent IS in the list but not yet processed.
                         // We should only create if parent IS found or if parentLabel is null.
                         
-                        // Correct Logic:
-                        // If parentLabel is defined but NOT in cache yet, SKIP this container this round.
-                        // UNLESS we are in the last pass, then fallback to Room.
-                        
-                        // Let's rely on the spatial/label lookup.
-                        // For this tool update, I will just bump the repeat count. 
-                        // The existing logic inside looks up 'parentEntity'. If null, it uses 'roomEntity'. 
-                        // This IS risky if the parent is known but not processed.
-                        
-                        // Let's improve the logic inside the block too.
                         val resolvedParent = cont.parentLabel?.let { pLabel ->
                              locationCache.entries.find { it.key.equals(pLabel, true) }?.value
                         }

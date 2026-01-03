@@ -31,9 +31,7 @@ class InventoryAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): androidx.recyclerview.widget.RecyclerView.ViewHolder {
         val inflater = LayoutInflater.from(parent.context)
         return if (viewType == TYPE_FOLDER) {
-            val binding = ItemInventoryBinding.inflate(inflater, parent, false) // Reuse for now or new layout? Reuse is risky.
-            // Let's modify binding or valid reuse.
-            // Actually, let's just use the same layout but styling.
+            val binding = ItemInventoryBinding.inflate(inflater, parent, false) 
             FolderViewHolder(binding)
         } else {
             val binding = ItemInventoryBinding.inflate(inflater, parent, false)
