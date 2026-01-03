@@ -14,7 +14,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.placemate.R
 import com.example.placemate.databinding.FragmentTakenItemsBinding
 import com.example.placemate.ui.inventory.InventoryAdapter
-import com.example.placemate.ui.inventory.ItemUiModel
+import com.example.placemate.ui.inventory.ExplorerItem
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -41,10 +41,13 @@ class TakenItemsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
-        val adapter = InventoryAdapter { item ->
-            val bundle = Bundle().apply { putString("itemId", item.id) }
-            findNavController().navigate(R.id.nav_item_detail, bundle)
-        }
+        val adapter = com.example.placemate.ui.inventory.InventoryAdapter(
+            onItemClick = { item ->
+                val bundle = Bundle().apply { putString("itemId", item.id) }
+                findNavController().navigate(R.id.nav_item_detail, bundle)
+            },
+            onFolderClick = { _ -> } // No folder navigation in Taken items
+        )
 
         binding.recyclerView.layoutManager = LinearLayoutManager(requireContext())
         binding.recyclerView.adapter = adapter
@@ -59,7 +62,7 @@ class TakenItemsFragment : Fragment() {
                 viewLifecycleOwner.lifecycleScope.launch {
                     viewModel.takenItems.collect { items ->
                         val filtered = items.filter { it.name.lowercase().contains(query) }
-                        adapter.submitList(filtered.map { ItemUiModel(it, 1) })
+                        adapter.submitList(filtered.map { ExplorerItem.File(it) })
                     }
                 }
             }
@@ -70,7 +73,7 @@ class TakenItemsFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.takenItems.collect { items ->
-                    adapter.submitList(items.map { ItemUiModel(it, 1) })
+                    adapter.submitList(items.map { ExplorerItem.File(it) })
                 }
             }
         }

@@ -28,7 +28,7 @@ class InventoryViewModel @Inject constructor(
     private val repository: com.example.placemate.data.repository.InventoryRepository,
     private val categoryManager: com.example.placemate.core.utils.CategoryManager
 ) : ViewModel() {
-// ... existing items flow ...
+
 
     fun syncScene(context: android.content.Context, result: SceneRecognitionResult, imageUri: android.net.Uri) {
         viewModelScope.launch {
@@ -163,6 +163,10 @@ class InventoryViewModel @Inject constructor(
             repository.getExplorerContent(locId)
         }
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    fun updateSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
 
     fun navigateTo(locationId: String?) {
         _currentLocationId.value = locationId

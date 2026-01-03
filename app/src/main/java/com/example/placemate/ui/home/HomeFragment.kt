@@ -35,10 +35,17 @@ class HomeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val adapter = InventoryAdapter { item ->
-            val bundle = Bundle().apply { putString("itemId", item.id) }
-            findNavController().navigate(R.id.nav_item_detail, bundle)
-        }
+        val adapter = InventoryAdapter(
+            onItemClick = { item ->
+                val bundle = Bundle().apply { putString("itemId", item.id) }
+                findNavController().navigate(R.id.nav_item_detail, bundle)
+            },
+            onFolderClick = { location ->
+                // Dashboard also supports drill-down? For now, just go to Inventory
+                val bundle = Bundle().apply { putString("locationId", location.id) }
+                findNavController().navigate(R.id.nav_inventory, bundle)
+            }
+        )
 
         binding.rvRecentActivity.layoutManager = LinearLayoutManager(requireContext())
         binding.rvRecentActivity.adapter = adapter

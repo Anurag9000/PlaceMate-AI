@@ -9,7 +9,6 @@ import com.example.placemate.data.local.entities.ItemEntity
 import com.example.placemate.databinding.ItemInventoryBinding
 
 import com.example.placemate.data.local.entities.LocationEntity
-import com.example.placemate.databinding.ItemInventoryBinding
 
 class InventoryAdapter(
     private val onItemClick: (ItemEntity) -> Unit,

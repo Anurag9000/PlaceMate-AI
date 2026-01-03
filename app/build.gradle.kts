@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.ksp)
+    kotlin("kapt")
 }
 
 android {
@@ -54,12 +55,12 @@ dependencies {
 
     // Hilt
     implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
+    kapt(libs.hilt.compiler)
 
     // Room
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
-    ksp(libs.room.compiler)
+    kapt(libs.room.compiler)
 
     // DataStore
     implementation(libs.datastore.preferences)
@@ -71,7 +72,7 @@ dependencies {
     // WorkManager
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.hilt.work)
-    ksp(libs.androidx.hilt.compiler)
+    // ksp(libs.androidx.hilt.compiler)
     implementation(libs.play.services.coroutines)
 
     // Gemini AI

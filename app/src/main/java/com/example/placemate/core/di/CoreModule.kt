@@ -31,7 +31,7 @@ object CoreModule {
     ): ItemRecognitionService {
         return object : ItemRecognitionService {
             private fun getActiveService(): ItemRecognitionService {
-                return if (configManager.isGeminiEnabled() && configManager.hasGeminiApiKey()) {
+                return if (configManager.isGeminiEnabled() && !configManager.getGeminiApiKey().isNullOrEmpty()) {
                     geminiService
                 } else {
                     mlKitService
