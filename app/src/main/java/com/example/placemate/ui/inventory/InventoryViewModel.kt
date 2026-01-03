@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import com.example.placemate.core.input.SceneRecognitionResult
 import com.example.placemate.data.local.entities.LocationType
@@ -146,40 +147,54 @@ class InventoryViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
 
-    val items: StateFlow<List<ItemUiModel>> = _searchQuery
-        .flatMapLatest { query ->
-            if (query.isEmpty()) {
-                repository.getAllItems()
-            } else {
-                repository.searchItems(query)
-            }
-        }
-        .transform { entityList ->
-             val uiModels = entityList.groupBy { 
-                Triple(it.name, it.category, it.status) 
-            }.map { (_, group) ->
-                val item = group.first()
-                val locId = repository.getLocationForItem(item.id)?.id
-                val path = if (locId != null) repository.getLocationPath(locId) else "Unknown Location"
-                ItemUiModel(item, group.size, path)
-            }
-            emit(uiModels)
-        }
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    private val _currentLocationId = MutableStateFlow<String?>(null)
+    val currentLocationId: StateFlow<String?> = _currentLocationId
 
-    fun updateSearchQuery(query: String) {
-        _searchQuery.value = query
+    private val _refreshTrigger = MutableStateFlow(0)
+
+    val explorerItems: StateFlow<List<ExplorerItem>> = kotlinx.coroutines.flow.combine(
+        _currentLocationId,
+        _searchQuery,
+        _refreshTrigger
+    ) { locId, query, _ ->
+        if (query.isNotEmpty()) {
+            repository.searchItems(query).first().map { ExplorerItem.File(it) }
+        } else {
+            repository.getExplorerContent(locId)
+        }
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    fun navigateTo(locationId: String?) {
+        _currentLocationId.value = locationId
+    }
+
+    fun navigateUp() {
+        viewModelScope.launch {
+            val current = _currentLocationId.value
+            if (current != null) {
+                val all = repository.getAllLocationsSync()
+                val parent = all?.find { it.id == current }?.parentId
+                _currentLocationId.value = parent
+            }
+        }
+    }
+
+    fun refreshExplorer() {
+        _refreshTrigger.value += 1
     }
 
     fun deleteItem(item: ItemEntity) {
         viewModelScope.launch {
             repository.deleteItem(item)
+            refreshExplorer()
         }
     }
 
     fun clearAllData() {
         viewModelScope.launch {
             repository.nukeData()
+            _currentLocationId.value = null
+            refreshExplorer()
         }
     }
 }

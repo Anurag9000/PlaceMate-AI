@@ -155,7 +155,29 @@ class InventoryFragment : Fragment() {
             }
         })
 
-        // ... search listener ...
+        binding.searchEditText.addTextChangedListener { text ->
+            viewModel.updateSearchQuery(text?.toString() ?: "")
+        }
+
+        binding.fabAdd.setOnClickListener {
+            findNavController().navigate(R.id.nav_add_item)
+        }
+
+        binding.btnSpeechSearch.setOnClickListener {
+            startSpeechSearch()
+        }
+
+        binding.btnVisualSearch.setOnClickListener {
+            startVisualSearch(false)
+        }
+
+        binding.btnSceneScan.setOnClickListener {
+            startVisualSearch(true)
+        }
+
+        binding.btnClearData.setOnClickListener {
+            showClearDataConfirmation()
+        }
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
