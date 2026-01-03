@@ -10,26 +10,15 @@ import com.example.placemate.databinding.ItemInventoryBinding
 
 data class ItemUiModel(
     val item: ItemEntity,
-    val count: Int
+    val count: Int,
+    val locationPath: String
 )
 
 class InventoryAdapter(
     private val onItemClick: (ItemEntity) -> Unit
 ) : ListAdapter<ItemUiModel, InventoryAdapter.ViewHolder>(ItemDiffCallback()) {
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        val binding = ItemInventoryBinding.inflate(
-            LayoutInflater.from(parent.context),
-            parent,
-            false
-        )
-        return ViewHolder(binding)
-    }
-
-    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val item = getItem(position)
-        holder.bind(item)
-    }
+    // ... onCreateViewHolder ...
 
     inner class ViewHolder(private val binding: ItemInventoryBinding) :
         RecyclerView.ViewHolder(binding.root) {
@@ -37,7 +26,14 @@ class InventoryAdapter(
         fun bind(uiModel: ItemUiModel) {
             val item = uiModel.item
             binding.itemName.text = if (uiModel.count > 1) "${item.name} (x${uiModel.count})" else item.name
-            binding.itemCategory.text = item.category
+            
+            // Show location path if available, otherwise category
+            if (uiModel.locationPath.isNotEmpty()) {
+                binding.itemCategory.text = "${uiModel.locationPath} • ${item.category}"
+            } else {
+                binding.itemCategory.text = item.category
+            }
+            
             binding.itemStatus.text = item.status.name
             
             if (!item.photoUri.isNullOrEmpty()) {

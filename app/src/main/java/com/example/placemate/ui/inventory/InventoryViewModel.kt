@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import com.example.placemate.core.input.SceneRecognitionResult
@@ -162,13 +163,16 @@ class InventoryViewModel @Inject constructor(
                 repository.searchItems(query)
             }
         }
-        .map { entityList ->
-            entityList.groupBy { 
-                // Group by attributes that define "sameness" for the user
+        .transform { entityList ->
+             val uiModels = entityList.groupBy { 
                 Triple(it.name, it.category, it.status) 
             }.map { (_, group) ->
-                ItemUiModel(group.first(), group.size)
+                val item = group.first()
+                val locId = repository.getLocationForItem(item.id)?.id
+                val path = if (locId != null) repository.getLocationPath(locId) else "Unknown Location"
+                ItemUiModel(item, group.size, path)
             }
+            emit(uiModels)
         }
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
