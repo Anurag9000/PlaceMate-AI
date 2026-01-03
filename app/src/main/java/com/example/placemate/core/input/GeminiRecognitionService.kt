@@ -99,10 +99,12 @@ class GeminiRecognitionService @Inject constructor(
         } catch (e: Exception) {
             android.util.Log.e("GeminiService", "Item recognition failed", e)
             val msg = e.localizedMessage ?: "Unknown error"
-            val userMsg = if (msg.contains("serialization", true) || msg.contains("404", true)) {
-                "Model unavailable. Please select a different model in Settings."
-            } else {
-                "Connection failed: $msg"
+            val userMsg = when {
+                msg.contains("429", true) || msg.contains("quota", true) -> 
+                    "AI Quota exceeded. Please wait a minute or switch to 'Gemini 1.5 Flash' in Settings for higher limits."
+                msg.contains("serialization", true) || msg.contains("404", true) ->
+                    "Model unavailable. Please select a different model in Settings."
+                else -> "Connection failed: $msg"
             }
             RecognitionResult(null, null, 0f, errorMessage = userMsg)
         }
@@ -189,7 +191,13 @@ class GeminiRecognitionService @Inject constructor(
             SceneRecognitionResult(recognized)
         } catch (e: Exception) {
             android.util.Log.e("GeminiService", "Scene recognition failed", e)
-            SceneRecognitionResult(emptyList(), "Service Error: ${e.message}")
+            val msg = e.localizedMessage ?: "Unknown error"
+            val userMsg = when {
+                msg.contains("429", true) || msg.contains("quota", true) -> 
+                    "AI Quota exceeded. Please wait a minute or switch to 'Gemini 1.5 Flash' in Settings for higher limits."
+                else -> "Service Error: $msg"
+            }
+            SceneRecognitionResult(emptyList(), userMsg)
         }
     }
 
