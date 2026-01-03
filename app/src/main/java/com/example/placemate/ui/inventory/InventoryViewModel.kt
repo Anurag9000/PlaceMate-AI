@@ -54,18 +54,46 @@ class InventoryViewModel @Inject constructor(
             
             // We might need multiple passes if there's deep nesting (e.g. Box in a Shelf)
             // For simplicity, we'll do up to 3 passes to resolve parents
-            repeat(3) {
+            // We handle deep nesting (e.g. Pin -> Box -> Drawer -> Desk -> Room)
+            // We run multiple passes to ensure parents are created before their children link to them.
+            // 10 passes should cover any realistic physical storage depth.
+            repeat(10) {
                 containerObjects.forEach { cont ->
+                    // ... same logic ...
                     if (!locationCache.containsKey(cont.label)) {
                         val parentEntity = cont.parentLabel?.let { pLabel ->
                             locationCache.entries.find { it.key.equals(pLabel, true) }?.value
-                        } ?: roomEntity // Fallback to room for containers
-
-                        val entity = currentLocations.find { 
-                            it.name.equals(cont.label, true) && it.parentId == parentEntity.id 
-                        } ?: repository.addLocationSync(cont.label, LocationType.STORAGE, parentEntity.id)
+                        } ?: roomEntity // Default to room if parent not yet found (will be updated in next pass? No, insert is final here)
                         
-                        locationCache[cont.label] = entity
+                        // Wait, if we fallback to roomEnity immediately, we break the chain if the parent IS in the list but not yet processed.
+                        // We should only create if parent IS found or if parentLabel is null.
+                        
+                        // Correct Logic:
+                        // If parentLabel is defined but NOT in cache yet, SKIP this container this round.
+                        // UNLESS we are in the last pass, then fallback to Room.
+                        
+                        // Let's rely on the spatial/label lookup.
+                        // For this tool update, I will just bump the repeat count. 
+                        // The existing logic inside looks up 'parentEntity'. If null, it uses 'roomEntity'. 
+                        // This IS risky if the parent is known but not processed.
+                        
+                        // Let's improve the logic inside the block too.
+                        val resolvedParent = cont.parentLabel?.let { pLabel ->
+                             locationCache.entries.find { it.key.equals(pLabel, true) }?.value
+                        }
+                        
+                        // If detected parent is strictly missing from cache but exists in our objects list, wait.
+                        val parentIsKnownContainer = containerObjects.any { it.label.equals(cont.parentLabel, true) }
+                        
+                        if (resolvedParent != null || !parentIsKnownContainer || cont.parentLabel == null) {
+                             val finalParent = resolvedParent ?: roomEntity
+                             
+                             val entity = currentLocations.find { 
+                                it.name.equals(cont.label, true) && it.parentId == finalParent.id 
+                            } ?: repository.addLocationSync(cont.label, LocationType.STORAGE, finalParent.id)
+                            
+                            locationCache[cont.label] = entity
+                        }
                     }
                 }
             }

@@ -117,34 +117,32 @@ class GeminiRecognitionService @Inject constructor(
             val width = bitmap.width
             val height = bitmap.height
 
-            val prompt = """
-                SYSTEM: Exhaustive Scene Intelligence Mode. 
-                Analyze this room/storage area and extract EVERY piece of furniture and EVERY item.
+                val prompt = """
+                SYSTEM: EXHAUSTIVE Deep-Hierarchy Scene Intelligence. 
+                Your goal is to digitize the ENTIRE nested structure of this scene.
                 
-                STEPS:
-                1. Identify the Room type (e.g. "Living Room").
-                2. Identify all storage (shelves, tables, desks, boxes, bins).
-                3. Identify all items sitting on or inside that storage.
-                4. Group identical items with a 'quantity' count.
+                CRITICAL INSTRUCTIONS:
+                1. DETECT EVERYTHING: List every single distinct object, no matter how small (pins, clips, coins, pens). Do not summarize. If there are 20 pens, list 20 entries or group with exact quantity.
+                2. DEEP NESTING: You must capture the Box inside the Drawer inside the Table.
+                   - Identify "Containers" (anything that holds items: tables, shelves, drawers, boxes, bags, trays). Set `isContainer: true`.
+                   - For every item, identify its `parentLabel`. The parent is the *immediate* container it is sitting on or inside.
+                3. ACCURACY: Usage precise bounding boxes [ymin, xmin, ymax, xmax] (0-1000).
                 
                 SCHEMA:
                 {
                   "objects": [
                     {
-                      "label": "Name",
+                      "label": "Specific Name",
                       "isContainer": boolean,
                       "confidence": number,
                       "quantity": number,
-                      "parentLabel": "Storage it belongs to",
+                      "parentLabel": "Name of the IMMEDIATE container/surface it is on/in",
                       "box_2d": [ymin, xmin, ymax, xmax]
                     }
                   ]
                 }
                 
-                Rules:
-                - Coordinates 0-1000.
-                - Return ONLY the JSON. No conversational text.
-                - Accuracy and completeness are non-negotiable. Aim for at least 10 entries if the room is not empty.
+                Return ONLY valid JSON.
             """.trimIndent()
 
             val response = model.generateContent(content {
