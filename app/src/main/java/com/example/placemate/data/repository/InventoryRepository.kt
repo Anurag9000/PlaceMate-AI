@@ -60,6 +60,23 @@ class InventoryRepository @Inject constructor(
         return locationDao.getAllLocationsSync()
     }
 
+    suspend fun getExplorerContent(parentId: String?): List<com.example.placemate.ui.inventory.ExplorerItem> {
+        val allLocations = locationDao.getAllLocationsSync()
+        val folders = allLocations.filter { it.parentId == parentId }.map { loc ->
+            com.example.placemate.ui.inventory.ExplorerItem.Folder(loc, 0)
+        }
+
+        val files = if (parentId != null) {
+            inventoryDao.getItemsForLocation(parentId).map { item ->
+                com.example.placemate.ui.inventory.ExplorerItem.File(item)
+            }
+        } else {
+            emptyList() 
+        }
+
+        return folders + files
+    }
+
     suspend fun addLocationSync(name: String, type: LocationType, parentId: String?): LocationEntity {
         val location = LocationEntity(name = name, type = type, parentId = parentId)
         locationDao.insertLocation(location)

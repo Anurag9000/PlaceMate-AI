@@ -8,50 +8,86 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.placemate.data.local.entities.ItemEntity
 import com.example.placemate.databinding.ItemInventoryBinding
 
-data class ItemUiModel(
-    val item: ItemEntity,
-    val count: Int,
-    val locationPath: String
-)
+import com.example.placemate.data.local.entities.LocationEntity
+import com.example.placemate.databinding.ItemInventoryBinding
 
 class InventoryAdapter(
-    private val onItemClick: (ItemEntity) -> Unit
-) : ListAdapter<ItemUiModel, InventoryAdapter.ViewHolder>(ItemDiffCallback()) {
+    private val onItemClick: (ItemEntity) -> Unit,
+    private val onFolderClick: (LocationEntity) -> Unit
+) : androidx.recyclerview.widget.ListAdapter<ExplorerItem, androidx.recyclerview.widget.RecyclerView.ViewHolder>(ExplorerDiffCallback()) {
 
-    // ... onCreateViewHolder ...
+    companion object {
+        private const val TYPE_FOLDER = 0
+        private const val TYPE_FILE = 1
+    }
 
-    inner class ViewHolder(private val binding: ItemInventoryBinding) :
-        RecyclerView.ViewHolder(binding.root) {
-
-        fun bind(uiModel: ItemUiModel) {
-            val item = uiModel.item
-            binding.itemName.text = if (uiModel.count > 1) "${item.name} (x${uiModel.count})" else item.name
-            
-            // Show location path if available, otherwise category
-            if (uiModel.locationPath.isNotEmpty()) {
-                binding.itemCategory.text = "${uiModel.locationPath} • ${item.category}"
-            } else {
-                binding.itemCategory.text = item.category
-            }
-            
-            binding.itemStatus.text = item.status.name
-            
-            if (!item.photoUri.isNullOrEmpty()) {
-                binding.itemImage.setImageURI(android.net.Uri.parse(item.photoUri))
-            } else {
-                binding.itemImage.setImageResource(android.R.drawable.ic_menu_gallery)
-            }
-
-            binding.root.setOnClickListener { onItemClick(item) }
+    override fun getItemViewType(position: Int): Int {
+        return when (getItem(position)) {
+            is ExplorerItem.Folder -> TYPE_FOLDER
+            is ExplorerItem.File -> TYPE_FILE
         }
     }
 
-    class ItemDiffCallback : DiffUtil.ItemCallback<ItemUiModel>() {
-        override fun areItemsTheSame(oldItem: ItemUiModel, newItem: ItemUiModel): Boolean {
-            return oldItem.item.id == newItem.item.id
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): androidx.recyclerview.widget.RecyclerView.ViewHolder {
+        val inflater = LayoutInflater.from(parent.context)
+        return if (viewType == TYPE_FOLDER) {
+            val binding = ItemInventoryBinding.inflate(inflater, parent, false) // Reuse for now or new layout? Reuse is risky.
+            // Let's modify binding or valid reuse.
+            // Actually, let's just use the same layout but styling.
+            FolderViewHolder(binding)
+        } else {
+            val binding = ItemInventoryBinding.inflate(inflater, parent, false)
+            FileViewHolder(binding)
+        }
+    }
+
+    override fun onBindViewHolder(holder: androidx.recyclerview.widget.RecyclerView.ViewHolder, position: Int) {
+        when (val item = getItem(position)) {
+            is ExplorerItem.Folder -> (holder as FolderViewHolder).bind(item)
+            is ExplorerItem.File -> (holder as FileViewHolder).bind(item)
+        }
+    }
+
+    inner class FolderViewHolder(private val binding: ItemInventoryBinding) : androidx.recyclerview.widget.RecyclerView.ViewHolder(binding.root) {
+        fun bind(item: ExplorerItem.Folder) {
+            binding.itemName.text = item.location.name
+            binding.itemCategory.text = "Contains items..." // Placeholder count
+            binding.itemStatus.text = "FOLDER"
+            binding.itemImage.setImageResource(android.R.drawable.ic_menu_more) // Folder icon placeholder
+            
+            binding.root.setOnClickListener { onFolderClick(item.location) }
+            
+            // Visual tweaks for folder
+            binding.root.setCardBackgroundColor(android.graphics.Color.parseColor("#F0F4F8")) // Light blue/gray
+        }
+    }
+
+    inner class FileViewHolder(private val binding: ItemInventoryBinding) : androidx.recyclerview.widget.RecyclerView.ViewHolder(binding.root) {
+        fun bind(item: ExplorerItem.File) {
+            val entity = item.item
+            binding.itemName.text = entity.name
+            binding.itemCategory.text = entity.category
+            binding.itemStatus.text = entity.status.name
+             if (!entity.photoUri.isNullOrEmpty()) {
+                binding.itemImage.setImageURI(android.net.Uri.parse(entity.photoUri))
+            } else {
+                binding.itemImage.setImageResource(android.R.drawable.ic_menu_gallery)
+            }
+            binding.root.setCardBackgroundColor(android.graphics.Color.WHITE)
+            binding.root.setOnClickListener { onItemClick(entity) }
+        }
+    }
+
+    class ExplorerDiffCallback : DiffUtil.ItemCallback<ExplorerItem>() {
+        override fun areItemsTheSame(oldItem: ExplorerItem, newItem: ExplorerItem): Boolean {
+           return if (oldItem is ExplorerItem.Folder && newItem is ExplorerItem.Folder) {
+               oldItem.location.id == newItem.location.id
+           } else if (oldItem is ExplorerItem.File && newItem is ExplorerItem.File) {
+               oldItem.item.id == newItem.item.id
+           } else false
         }
 
-        override fun areContentsTheSame(oldItem: ItemUiModel, newItem: ItemUiModel): Boolean {
+        override fun areContentsTheSame(oldItem: ExplorerItem, newItem: ExplorerItem): Boolean {
             return oldItem == newItem
         }
     }

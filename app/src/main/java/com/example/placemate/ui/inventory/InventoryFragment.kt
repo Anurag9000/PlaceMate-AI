@@ -130,43 +130,52 @@ class InventoryFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val adapter = InventoryAdapter { item ->
-            val bundle = Bundle().apply { putString("itemId", item.id) }
-            findNavController().navigate(R.id.nav_item_detail, bundle)
-        }
+        val adapter = InventoryAdapter(
+            onItemClick = { item ->
+                val bundle = Bundle().apply { putString("itemId", item.id) }
+                findNavController().navigate(R.id.nav_item_detail, bundle)
+            },
+            onFolderClick = { location ->
+                viewModel.navigateTo(location.id)
+            }
+        )
 
         binding.recyclerView.layoutManager = LinearLayoutManager(requireContext())
         binding.recyclerView.adapter = adapter
 
-        binding.searchEditText.addTextChangedListener { text ->
-            viewModel.updateSearchQuery(text?.toString() ?: "")
-        }
+        // Back Press handling for folder up navigation
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (viewModel.currentLocationId.value != null) {
+                    viewModel.navigateUp()
+                } else {
+                    isEnabled = false
+                    requireActivity().onBackPressed()
+                }
+            }
+        })
 
-        binding.fabAdd.setOnClickListener {
-            findNavController().navigate(R.id.nav_add_item)
-        }
-
-        binding.btnSpeechSearch.setOnClickListener {
-            startSpeechSearch()
-        }
-
-        binding.btnVisualSearch.setOnClickListener {
-            startVisualSearch(false)
-        }
-
-        binding.btnSceneScan.setOnClickListener {
-            startVisualSearch(true)
-        }
-
-        binding.btnClearData.setOnClickListener {
-            showClearDataConfirmation()
-        }
+        // ... search listener ...
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.items.collect { items ->
-                    adapter.submitList(items)
-                    binding.tvEmptyState.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
+                // Collect Explorer State
+                launch {
+                    viewModel.explorerItems.collect { items ->
+                        // If no items in explorer (and not searching?), show empty state?
+                        if (binding.searchEditText.text.isNullOrEmpty()) {
+                           adapter.submitList(items)
+                           binding.tvEmptyState.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
+                           binding.tvEmptyState.text = if (viewModel.currentLocationId.value == null) "No items yet. Scan something!" else "This location is empty."
+                        }
+                    }
+                }
+                
+                // Collect Current Location for UI Update (Title?)
+                launch {
+                    viewModel.currentLocationId.collect { locId ->
+                        // Improve UI later to show "Current: Living Room"
+                    }
                 }
             }
         }
