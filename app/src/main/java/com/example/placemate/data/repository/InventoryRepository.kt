@@ -79,8 +79,8 @@ class InventoryRepository @Inject constructor(
         return folders + files
     }
 
-    suspend fun addLocationSync(name: String, type: LocationType, parentId: String?): LocationEntity {
-        val location = LocationEntity(name = name, type = type, parentId = parentId)
+    suspend fun addLocationSync(name: String, type: LocationType, parentId: String?, photoUri: String? = null): LocationEntity {
+        val location = LocationEntity(name = name, type = type, parentId = parentId, photoUri = photoUri)
         locationDao.insertLocation(location)
         return location
     }

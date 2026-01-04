@@ -169,6 +169,10 @@ class InventoryFragment : Fragment() {
             findNavController().navigate(R.id.nav_add_item)
         }
 
+        binding.fabAddFolder.setOnClickListener {
+            showLocationDialog(null)
+        }
+
         binding.btnSpeechSearch.setOnClickListener {
             startSpeechSearch()
         }
@@ -237,10 +241,7 @@ class InventoryFragment : Fragment() {
             .setTitle("Location Detected")
             .setMessage("I detected a '${result.suggestedName}'. Do you want to add this as a new Location?")
             .setPositiveButton("Add Location") { _, _ ->
-                val bundle = Bundle().apply { 
-                    putString("openAddDialogName", result.suggestedName)
-                }
-                findNavController().navigate(R.id.nav_locations, bundle)
+                showLocationDialog(null, result.suggestedName)
             }
             .setNegativeButton("Search as Item") { _, _ ->
                 handleSingleItemDetection(result)
@@ -322,41 +323,49 @@ class InventoryFragment : Fragment() {
             .show()
     }
 
-    private fun showLocationDialog(locationToEdit: com.example.placemate.data.local.entities.LocationEntity) {
+    private fun showLocationDialog(locationToEdit: com.example.placemate.data.local.entities.LocationEntity?, initialName: String? = null) {
         val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_add_location, null)
         val nameInput = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.location_name_edit_text)
-        nameInput.setText(locationToEdit.name)
+        nameInput.setText(locationToEdit?.name ?: initialName ?: "")
+        
         val typeSpinner = dialogView.findViewById<android.widget.Spinner>(R.id.type_spinner)
         val parentSpinner = dialogView.findViewById<android.widget.Spinner>(R.id.parent_spinner)
 
         // Setup type spinner
         val types = com.example.placemate.data.local.entities.LocationType.values()
         typeSpinner.adapter = android.widget.ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, types.map { it.name })
-        typeSpinner.setSelection(types.indexOf(locationToEdit.type))
+        locationToEdit?.let { typeSpinner.setSelection(types.indexOf(it.type)) }
 
         // Setup parent spinner
-        // We need all locations to populate the parent spinner
         viewLifecycleOwner.lifecycleScope.launch {
-            val allLocations = viewModel.getAllLocations() // We might need to add this to ViewModel
-            val filteredLocations = allLocations.filter { it.id != locationToEdit.id }
+            val allLocations = viewModel.getAllLocations()
+            val filteredLocations = if (locationToEdit != null) allLocations.filter { it.id != locationToEdit.id } else allLocations
             val parentNames = mutableListOf("None")
             parentNames.addAll(filteredLocations.map { it.name })
             parentSpinner.adapter = android.widget.ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, parentNames)
             
-            val parentIndex = filteredLocations.indexOfFirst { it.id == locationToEdit.parentId }
+            // Default to current location if adding new
+            val currentLocId = viewModel.currentLocationId.value
+            val initialParentId = locationToEdit?.parentId ?: currentLocId
+            val parentIndex = filteredLocations.indexOfFirst { it.id == initialParentId }
             if (parentIndex >= 0) parentSpinner.setSelection(parentIndex + 1)
 
             android.app.AlertDialog.Builder(requireContext())
-                .setTitle("Edit Folder")
+                .setTitle(if (locationToEdit == null) "Add Folder" else "Edit Folder")
                 .setView(dialogView)
-                .setPositiveButton("Update") { _, _ ->
+                .setPositiveButton(if (locationToEdit == null) "Add" else "Update") { _, _ ->
                     val name = nameInput.text?.toString() ?: return@setPositiveButton
                     val type = types[typeSpinner.selectedItemPosition]
                     val pIndex = parentSpinner.selectedItemPosition
                     val pId = if (pIndex == 0) null else filteredLocations[pIndex - 1].id
 
-                    viewModel.updateLocation(locationToEdit.id, name, type, pId)
-                    android.widget.Toast.makeText(requireContext(), "Folder updated!", android.widget.Toast.LENGTH_SHORT).show()
+                    if (locationToEdit == null) {
+                        viewModel.addLocation(name, type, pId)
+                        android.widget.Toast.makeText(requireContext(), "Folder created!", android.widget.Toast.LENGTH_SHORT).show()
+                    } else {
+                        viewModel.updateLocation(locationToEdit.id, name, type, pId)
+                        android.widget.Toast.makeText(requireContext(), "Folder updated!", android.widget.Toast.LENGTH_SHORT).show()
+                    }
                 }
                 .setNegativeButton("Cancel", null)
                 .show()

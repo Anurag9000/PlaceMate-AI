@@ -50,7 +50,11 @@ class InventoryAdapter(
             binding.itemName.text = item.location.name
             binding.itemCategory.text = "Contains items..." // Placeholder count
             binding.itemStatus.text = "FOLDER"
-            binding.itemImage.setImageResource(android.R.drawable.ic_menu_more) // Folder icon placeholder
+            if (!item.location.photoUri.isNullOrEmpty()) {
+                binding.itemImage.setImageURI(android.net.Uri.parse(item.location.photoUri))
+            } else {
+                binding.itemImage.setImageResource(android.R.drawable.ic_menu_more) // Folder icon placeholder
+            }
             
             binding.root.setOnClickListener { onFolderClick(item.location) }
             binding.root.setOnLongClickListener {

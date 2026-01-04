@@ -35,7 +35,7 @@ class MainActivity : AppCompatActivity() {
         binding.navView?.let {
             appBarConfiguration = AppBarConfiguration(
                 setOf(
-                    R.id.nav_home, R.id.nav_inventory, R.id.nav_locations, R.id.nav_taken_items, R.id.nav_settings
+                    R.id.nav_home, R.id.nav_inventory, R.id.nav_taken_items, R.id.nav_settings
                 ),
                 binding.drawerLayout
             )

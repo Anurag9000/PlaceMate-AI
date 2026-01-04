@@ -46,8 +46,12 @@ class InventoryViewModel @Inject constructor(
             } ?: objects.firstOrNull { it.isContainer && it.parentLabel == null }
             
             val roomLabel = roomObj?.label ?: "Scanned Room"
+            val roomPhotoUri = roomObj?.boundingBox?.let { 
+                com.example.placemate.core.utils.ImageUtils.cropAndSave(context, imageUri, it)
+            }
+            
             val roomEntity = currentLocations.find { it.name.equals(roomLabel, true) && it.parentId == null }
-                ?: repository.addLocationSync(roomLabel, LocationType.ROOM, null)
+                ?: repository.addLocationSync(roomLabel, LocationType.ROOM, null, roomPhotoUri?.toString())
             
             locationCache[roomLabel] = roomEntity
 
@@ -81,9 +85,13 @@ class InventoryViewModel @Inject constructor(
                         if (resolvedParent != null || !parentIsKnownContainer || cont.parentLabel == null) {
                              val finalParent = resolvedParent ?: roomEntity
                              
+                             val contPhotoUri = cont.boundingBox?.let { 
+                                 com.example.placemate.core.utils.ImageUtils.cropAndSave(context, imageUri, it)
+                             }
+
                              val entity = currentLocations.find { 
                                 it.name.equals(cont.label, true) && it.parentId == finalParent.id 
-                            } ?: repository.addLocationSync(cont.label, LocationType.STORAGE, finalParent.id)
+                            } ?: repository.addLocationSync(cont.label, LocationType.STORAGE, finalParent.id, contPhotoUri?.toString())
                             
                             locationCache[cont.label] = entity
                         }
@@ -225,5 +233,12 @@ class InventoryViewModel @Inject constructor(
 
     suspend fun getAllLocations(): List<LocationEntity> {
         return repository.getAllLocationsSync() ?: emptyList()
+    }
+
+    fun addLocation(name: String, type: LocationType, parentId: String?) {
+        viewModelScope.launch {
+            repository.addLocationSync(name, type, parentId)
+            refreshExplorer()
+        }
     }
 }

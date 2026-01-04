@@ -34,6 +34,7 @@ data class LocationEntity(
     val name: String,
     val type: LocationType,
     val parentId: String?,
+    val photoUri: String? = null,
     val createdAt: Long = System.currentTimeMillis()
 )
 

@@ -14,7 +14,7 @@ import com.example.placemate.data.local.entities.*
         BorrowEventEntity::class,
         ReminderEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
