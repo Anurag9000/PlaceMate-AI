@@ -152,6 +152,14 @@ class InventoryViewModel @Inject constructor(
 
     private val _refreshTrigger = MutableStateFlow(0)
 
+    val currentPath: StateFlow<String> = _currentLocationId
+        .flatMapLatest { locId ->
+            if (locId == null) kotlinx.coroutines.flow.flowOf("Home")
+            else kotlinx.coroutines.flow.flow {
+                emit(repository.getLocationPath(locId).takeIf { it.isNotEmpty() } ?: "Unknown Location")
+            }
+        }.stateIn(viewModelScope, SharingStarted.Lazily, "Home")
+
     val explorerItems: StateFlow<List<ExplorerItem>> = kotlinx.coroutines.flow.combine(
         _currentLocationId,
         _searchQuery,

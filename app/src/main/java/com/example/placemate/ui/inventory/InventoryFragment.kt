@@ -193,10 +193,10 @@ class InventoryFragment : Fragment() {
                     }
                 }
                 
-                // Collect Current Location for UI Update (Title?)
+                // Collect Current Location for UI Update (Breadcrumb)
                 launch {
-                    viewModel.currentLocationId.collect { locId ->
-                        // Improve UI later to show "Current: Living Room"
+                    viewModel.currentPath.collect { path ->
+                        binding.tvBreadcrumb.text = if (binding.searchEditText.text.isNullOrEmpty()) path else "Searching..."
                     }
                 }
             }
