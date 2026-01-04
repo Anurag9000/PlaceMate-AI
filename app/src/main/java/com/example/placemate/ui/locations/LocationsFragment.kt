@@ -40,11 +40,16 @@ class LocationsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
-        val adapter = LocationAdapter { location ->
-            // Navigate to InventoryFragment with locationId for drill-down
-            val bundle = Bundle().apply { putString("locationId", location.id) }
-            androidx.navigation.fragment.NavHostFragment.findNavController(this).navigate(R.id.nav_inventory, bundle)
-        }
+        val adapter = LocationAdapter(
+            onItemClick = { location ->
+                // Navigate to InventoryFragment with locationId for drill-down
+                val bundle = Bundle().apply { putString("locationId", location.id) }
+                androidx.navigation.fragment.NavHostFragment.findNavController(this).navigate(R.id.nav_inventory, bundle)
+            },
+            onItemLongClick = { location ->
+                showLocationDialog(location)
+            }
+        )
 
         binding.recyclerView.layoutManager = LinearLayoutManager(requireContext())
         binding.recyclerView.adapter = adapter
@@ -54,7 +59,7 @@ class LocationsFragment : Fragment() {
         }
 
         binding.fabAddLocation.setOnClickListener {
-            showAddLocationDialog()
+            showLocationDialog()
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -66,7 +71,7 @@ class LocationsFragment : Fragment() {
         }
 
         arguments?.getString("openAddDialogName")?.let { name ->
-            showAddLocationDialog(name)
+            showLocationDialog(initialName = name)
             arguments?.remove("openAddDialogName")
         }
     }
@@ -77,48 +82,57 @@ class LocationsFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             speechManager.startListening().collect { state ->
                 if (state is com.example.placemate.core.input.SpeechState.Result) {
-                    showAddLocationDialog(state.text)
+                    showLocationDialog(initialName = state.text)
                 }
             }
         }
     }
 
-    private fun showAddLocationDialog(initialName: String = "") {
+    private fun showLocationDialog(locationToEdit: com.example.placemate.data.local.entities.LocationEntity? = null, initialName: String = "") {
         val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_add_location, null)
         val nameInput = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.location_name_edit_text)
-        nameInput.setText(initialName)
+        nameInput.setText(locationToEdit?.name ?: initialName)
         val typeSpinner = dialogView.findViewById<android.widget.Spinner>(R.id.type_spinner)
         val parentSpinner = dialogView.findViewById<android.widget.Spinner>(R.id.parent_spinner)
 
         // Setup type spinner
         val types = com.example.placemate.data.local.entities.LocationType.values()
         typeSpinner.adapter = android.widget.ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, types.map { it.name })
+        locationToEdit?.let { typeSpinner.setSelection(types.indexOf(it.type)) }
 
         // Setup parent spinner
-        val locations = viewModel.locations.value
+        val locations = viewModel.locations.value.filter { it.id != locationToEdit?.id }
         val parentNames = mutableListOf("None")
         parentNames.addAll(locations.map { it.name })
         parentSpinner.adapter = android.widget.ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, parentNames)
+        locationToEdit?.let { loc ->
+            val parentIndex = locations.indexOfFirst { it.id == loc.parentId }
+            if (parentIndex >= 0) parentSpinner.setSelection(parentIndex + 1)
+        }
 
         android.app.AlertDialog.Builder(requireContext())
-            .setTitle("Add Location")
+            .setTitle(if (locationToEdit != null) "Edit Location" else "Add Location")
             .setView(dialogView)
-            .setPositiveButton("Add") { _, _ ->
+            .setPositiveButton(if (locationToEdit != null) "Update" else "Add") { _, _ ->
                 val name = nameInput.text?.toString() ?: return@setPositiveButton
                 val type = types[typeSpinner.selectedItemPosition]
                 val parentIndex = parentSpinner.selectedItemPosition
                 val parentId = if (parentIndex == 0) null else locations[parentIndex - 1].id
 
-                val existingLocation = viewModel.checkLocationExists(name)
-                if (existingLocation != null) {
-                    viewLifecycleOwner.lifecycleScope.launch {
-                        val items = viewModel.getItemsForLocation(existingLocation.id)
-                        showDuplicateWarning(existingLocation, items) {
-                            viewModel.addLocation(name, type, parentId)
-                        }
-                    }
+                if (locationToEdit != null) {
+                    viewModel.updateLocation(locationToEdit.id, name, type, parentId)
                 } else {
-                    viewModel.addLocation(name, type, parentId)
+                    val existingLocation = viewModel.checkLocationExists(name)
+                    if (existingLocation != null) {
+                        viewLifecycleOwner.lifecycleScope.launch {
+                            val items = viewModel.getItemsForLocation(existingLocation.id)
+                            showDuplicateWarning(existingLocation, items) {
+                                viewModel.addLocation(name, type, parentId)
+                            }
+                        }
+                    } else {
+                        viewModel.addLocation(name, type, parentId)
+                    }
                 }
             }
             .setNegativeButton("Cancel", null)

@@ -9,7 +9,8 @@ import com.example.placemate.data.local.entities.LocationEntity
 import com.example.placemate.databinding.ItemLocationBinding
 
 class LocationAdapter(
-    private val onItemClick: (LocationEntity) -> Unit
+    private val onItemClick: (LocationEntity) -> Unit,
+    private val onItemLongClick: (LocationEntity) -> Unit
 ) : ListAdapter<LocationEntity, LocationAdapter.ViewHolder>(LocationDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -33,6 +34,10 @@ class LocationAdapter(
             binding.locationName.text = item.name
             binding.locationType.text = item.type.name
             binding.root.setOnClickListener { onItemClick(item) }
+            binding.root.setOnLongClickListener {
+                onItemLongClick(item)
+                true
+            }
         }
     }
 

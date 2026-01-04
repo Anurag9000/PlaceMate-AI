@@ -35,6 +35,8 @@ class InventoryRepository @Inject constructor(
 
     suspend fun saveLocation(location: LocationEntity) = locationDao.insertLocation(location)
 
+    suspend fun updateLocation(location: LocationEntity) = locationDao.updateLocation(location)
+
     suspend fun getLocationForItem(itemId: String): LocationEntity? = inventoryDao.getLocationForItem(itemId)
 
     suspend fun getLocationPath(locationId: String): String {
