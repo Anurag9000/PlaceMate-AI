@@ -51,9 +51,18 @@ class InventoryViewModel @Inject constructor(
             }
             
             val roomEntity = currentLocations.find { it.name.equals(roomLabel, true) && it.parentId == null }
-                ?: repository.addLocationSync(roomLabel, LocationType.ROOM, null, roomPhotoUri?.toString())
             
-            locationCache[roomLabel] = roomEntity
+            val finalRoomEntity = if (roomEntity != null) {
+                // Refresh photo if it's an existing room
+                if (roomPhotoUri != null) {
+                    repository.updateLocation(roomEntity.copy(photoUri = roomPhotoUri.toString()))
+                }
+                roomEntity
+            } else {
+                repository.addLocationSync(roomLabel, LocationType.ROOM, null, roomPhotoUri?.toString())
+            }
+            
+            locationCache[roomLabel] = finalRoomEntity
 
             // 2. Identify all storage containers and build hierarchy
             // Sort by confidence or label density if needed, but here we process all containers
@@ -89,16 +98,26 @@ class InventoryViewModel @Inject constructor(
                                  com.example.placemate.core.utils.ImageUtils.cropAndSave(context, imageUri, it)
                              }
 
-                             val entity = currentLocations.find { 
-                                it.name.equals(cont.label, true) && it.parentId == finalParent.id 
-                            } ?: repository.addLocationSync(cont.label, LocationType.STORAGE, finalParent.id, contPhotoUri?.toString())
+                             val existingEntity = currentLocations.find { 
+                                it.name.equals(cont.label, true) && it.parentId == finalParent!!.id 
+                            }
                             
+                            val entity = if (existingEntity != null) {
+                                // Refresh photo if it's an existing container
+                                if (contPhotoUri != null) {
+                                    repository.updateLocation(existingEntity.copy(photoUri = contPhotoUri.toString()))
+                                }
+                                existingEntity
+                            } else {
+                                repository.addLocationSync(cont.label, LocationType.STORAGE, finalParent!!.id, contPhotoUri?.toString())
+                            }
+                             
                             locationCache[cont.label] = entity
                         }
                     }
                 }
             }
-
+ 
             val existingItems = repository.getAllItemsSync().map { it.name }.toMutableSet()
             
             // 3. Process all items
@@ -117,7 +136,7 @@ class InventoryViewModel @Inject constructor(
                         val r = contObj.boundingBox!!
                         r.width() * r.height()
                     }?.let { locationCache[it.label] }
-                } ?: roomEntity
+                } ?: finalRoomEntity!!
 
                 val croppedUri = item.boundingBox?.let { 
                      com.example.placemate.core.utils.ImageUtils.cropAndSave(context, imageUri, it)
@@ -244,5 +263,11 @@ class InventoryViewModel @Inject constructor(
             repository.addLocationSync(name, type, parentId)
             refreshExplorer()
         }
+    }
+
+    suspend fun getLocationContextHint(): String {
+        val locations = repository.getAllLocationsSync() ?: return ""
+        // Top level rooms only as hints for now
+        return locations.filter { it.parentId == null }.joinToString(", ") { it.name }
     }
 }

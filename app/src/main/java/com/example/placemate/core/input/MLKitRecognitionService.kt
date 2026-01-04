@@ -60,7 +60,7 @@ class MLKitRecognitionService @Inject constructor(
         }
     }
 
-    override suspend fun recognizeScene(imageUri: Uri): SceneRecognitionResult {
+    override suspend fun recognizeScene(imageUri: Uri, contextHint: String?): SceneRecognitionResult {
         return try {
             val image = InputImage.fromFilePath(context, imageUri)
             

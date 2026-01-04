@@ -42,8 +42,8 @@ object CoreModule {
                 return getActiveService().recognizeItem(imageUri)
             }
 
-            override suspend fun recognizeScene(imageUri: android.net.Uri): com.example.placemate.core.input.SceneRecognitionResult {
-                return getActiveService().recognizeScene(imageUri)
+            override suspend fun recognizeScene(imageUri: android.net.Uri, contextHint: String?): com.example.placemate.core.input.SceneRecognitionResult {
+                return getActiveService().recognizeScene(imageUri, contextHint)
             }
         }
     }

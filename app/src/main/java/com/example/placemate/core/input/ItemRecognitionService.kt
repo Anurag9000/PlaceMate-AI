@@ -6,7 +6,7 @@ import javax.inject.Singleton
 
 interface ItemRecognitionService {
     suspend fun recognizeItem(imageUri: Uri): RecognitionResult
-    suspend fun recognizeScene(imageUri: Uri): SceneRecognitionResult
+    suspend fun recognizeScene(imageUri: Uri, contextHint: String? = null): SceneRecognitionResult
 }
 
 data class RecognitionResult(
@@ -42,7 +42,7 @@ class StubRecognitionService @Inject constructor() : ItemRecognitionService {
         )
     }
 
-    override suspend fun recognizeScene(imageUri: Uri): SceneRecognitionResult {
+    override suspend fun recognizeScene(imageUri: Uri, contextHint: String?): SceneRecognitionResult {
         return SceneRecognitionResult(
             objects = listOf(
                 RecognizedObject("Item 1", false, 0.9f),

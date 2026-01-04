@@ -94,7 +94,8 @@ class InventoryFragment : Fragment() {
             photoFile?.let { file ->
                 viewLifecycleOwner.lifecycleScope.launch {
                     val uri = android.net.Uri.fromFile(file)
-                    val sceneResult = recognitionService.recognizeScene(uri)
+                    val hint = viewModel.getLocationContextHint()
+                    val sceneResult = recognitionService.recognizeScene(uri, hint)
                     
                     if (sceneResult.errorMessage != null) {
                         showErrorDialog("Scan Error", sceneResult.errorMessage)

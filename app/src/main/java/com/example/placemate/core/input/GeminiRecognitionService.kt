@@ -110,7 +110,7 @@ class GeminiRecognitionService @Inject constructor(
         }
     }
 
-    override suspend fun recognizeScene(imageUri: Uri): SceneRecognitionResult = withContext(Dispatchers.IO) {
+    override suspend fun recognizeScene(imageUri: Uri, contextHint: String?): SceneRecognitionResult = withContext(Dispatchers.IO) {
         if (!isOnline()) return@withContext SceneRecognitionResult(emptyList(), "Internet connection required for Gemini AI")
         val model = getModel() ?: return@withContext SceneRecognitionResult(emptyList(), "Gemini API Key missing or invalid")
 
@@ -119,7 +119,14 @@ class GeminiRecognitionService @Inject constructor(
             val width = bitmap.width
             val height = bitmap.height
 
-            val prompt = configManager.getCustomGeminiPrompt()
+            val basePrompt = configManager.getCustomGeminiPrompt()
+            val prompt = if (!contextHint.isNullOrEmpty()) {
+                "CONTEXT: The following locations already exist in the user's domain: $contextHint. " +
+                "Try to match the current scene or its containers to these existing labels if they are visually similar.\n\n" +
+                basePrompt
+            } else {
+                basePrompt
+            }
 
             val response = model.generateContent(content {
                 image(bitmap)
