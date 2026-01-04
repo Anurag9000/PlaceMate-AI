@@ -119,33 +119,7 @@ class GeminiRecognitionService @Inject constructor(
             val width = bitmap.width
             val height = bitmap.height
 
-                val prompt = """
-                SYSTEM: EXHAUSTIVE Deep-Hierarchy Scene Intelligence. 
-                Your goal is to digitize the ENTIRE nested structure of this scene.
-                
-                CRITICAL INSTRUCTIONS:
-                1. DETECT EVERYTHING: List every single distinct object, no matter how small (pins, clips, coins, pens). Do not summarize. If there are 20 pens, list 20 entries or group with exact quantity.
-                2. DEEP NESTING: You must capture the Box inside the Drawer inside the Table.
-                   - Identify "Containers" (anything that holds items: tables, shelves, drawers, boxes, bags, trays). Set `isContainer: true`.
-                   - For every item, identify its `parentLabel`. The parent is the *immediate* container it is sitting on or inside.
-                3. ACCURACY: Usage precise bounding boxes [ymin, xmin, ymax, xmax] (0-1000).
-                
-                SCHEMA:
-                {
-                  "objects": [
-                    {
-                      "label": "Specific Name",
-                      "isContainer": boolean,
-                      "confidence": number,
-                      "quantity": number,
-                      "parentLabel": "Name of the IMMEDIATE container/surface it is on/in",
-                      "box_2d": [ymin, xmin, ymax, xmax]
-                    }
-                  ]
-                }
-                
-                Return ONLY valid JSON.
-            """.trimIndent()
+            val prompt = configManager.getCustomGeminiPrompt()
 
             val response = model.generateContent(content {
                 image(bitmap)

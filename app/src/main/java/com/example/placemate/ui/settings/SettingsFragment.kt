@@ -38,6 +38,8 @@ class SettingsFragment : Fragment() {
         // Load existing settings
         val currentApiKey = settingsRepository.getGeminiApiKey()
         binding.editApiKey.setText(currentApiKey)
+        
+        binding.editCustomPrompt.setText(settingsRepository.getCustomGeminiPrompt())
 
         // Model Refresh Logic
         binding.btnRefreshModels.setOnClickListener {
@@ -109,6 +111,14 @@ class SettingsFragment : Fragment() {
         binding.switchUseGemini.setOnCheckedChangeListener { _, isChecked ->
             binding.layoutApiKey.isEnabled = isChecked
             binding.spinnerGeminiModel.isEnabled = isChecked
+            binding.layoutCustomPrompt.isEnabled = isChecked
+            binding.btnResetPrompt.isEnabled = isChecked
+        }
+
+        binding.btnResetPrompt.setOnClickListener {
+            settingsRepository.resetGeminiPrompt()
+            binding.editCustomPrompt.setText(settingsRepository.getCustomGeminiPrompt())
+            Toast.makeText(requireContext(), "Prompt reset to default", Toast.LENGTH_SHORT).show()
         }
 
         binding.btnSaveSettings.setOnClickListener {
@@ -127,6 +137,7 @@ class SettingsFragment : Fragment() {
                 settingsRepository.updateGeminiApiKey(apiKey)
                 settingsRepository.setUseGemini(useGemini)
                 settingsRepository.setSelectedGeminiModel(selectedModel)
+                settingsRepository.updateCustomGeminiPrompt(binding.editCustomPrompt.text.toString())
                 Toast.makeText(requireContext(), "Settings saved! Using $selectedModel", Toast.LENGTH_SHORT).show()
             }
         }

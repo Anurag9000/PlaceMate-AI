@@ -61,10 +61,53 @@ class ConfigManager @Inject constructor(
         standardPrefs.edit().putString(KEY_SELECTED_GEMINI_MODEL, model).apply()
     }
 
+    fun getCustomGeminiPrompt(): String {
+        return standardPrefs.getString(KEY_CUSTOM_GEMINI_PROMPT, DEFAULT_PROMPT) ?: DEFAULT_PROMPT
+    }
+
+    fun setCustomGeminiPrompt(prompt: String) {
+        standardPrefs.edit().putString(KEY_CUSTOM_GEMINI_PROMPT, prompt).apply()
+    }
+
+    fun resetGeminiPrompt() {
+        standardPrefs.edit().remove(KEY_CUSTOM_GEMINI_PROMPT).apply()
+    }
+
     companion object {
         private const val KEY_GEMINI_API_KEY = "gemini_api_key"
         private const val KEY_USE_GEMINI = "use_gemini"
         private const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
         private const val KEY_SELECTED_GEMINI_MODEL = "selected_gemini_model"
+        private const val KEY_CUSTOM_GEMINI_PROMPT = "custom_gemini_prompt"
+
+        private const val DEFAULT_PROMPT = """
+SYSTEM: EXHAUSTIVE Deep-Hierarchy Scene Intelligence for Personal Organization.
+Your goal is to digitize the nested structure of USABLE items and storage containers in this scene.
+
+CRITICAL INSTRUCTIONS:
+1. FOCUS ON USABLE OBJECTS: Identify items that can be organized, moved, or misplaced (tools, electronics, stationary, kitchenware, toys, documents). 
+   - DO NOT list infrastructure (walls, floors, ceilings, windows, tubelights, switchboards).
+   - DO NOT list humans, pets, or outdoor scenery.
+2. DETECT EVERYTHING USABLE: List every single distinct object, no matter how small (pins, clips, coins, pens). If there are multiple identical items, group them with an exact quantity.
+3. DEEP NESTING: Capture the hierarchical relationship (e.g., Screws inside a Box inside a Drawer inside a Workbench).
+   - Identify "Containers" (surfaces or receptacles that hold items: tables, shelves, drawers, boxes, bags, trays). Set `isContainer: true`.
+   - For every object, identify its `parentLabel` (the IMMEDIATE container or surface it is on/in).
+4. ACCURACY: Use precise bounding boxes [ymin, xmin, ymax, xmax] (0-1000).
+
+SCHEMA:
+{
+  "objects": [
+    {
+      "label": "Specific Name",
+      "isContainer": boolean,
+      "confidence": number,
+      "quantity": number,
+      "parentLabel": "Name of the IMMEDIATE container/surface",
+      "box_2d": [ymin, xmin, ymax, xmax]
+    }
+  ]
+}
+Return ONLY valid JSON.
+"""
     }
 }

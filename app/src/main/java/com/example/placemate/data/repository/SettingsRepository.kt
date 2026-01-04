@@ -48,4 +48,14 @@ class SettingsRepository @Inject constructor(
     fun setSelectedGeminiModel(model: String) {
         configManager.setSelectedGeminiModel(model)
     }
+
+    fun getCustomGeminiPrompt(): String = configManager.getCustomGeminiPrompt()
+
+    fun updateCustomGeminiPrompt(prompt: String) {
+        configManager.setCustomGeminiPrompt(prompt)
+    }
+
+    fun resetGeminiPrompt() {
+        configManager.resetGeminiPrompt()
+    }
 }
