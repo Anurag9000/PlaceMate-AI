@@ -21,7 +21,30 @@ class StubInputInterpreter @Inject constructor(
         val lowerText = text.lowercase()
         return when {
             lowerText.startsWith("add ") -> {
-                InterpretedIntent.AddItem(name = text.substring(4).trim())
+                val raw = text.substring(4).trim()
+                // Pattern: "add [Item] in [Location] in [Sub-Location]..."
+                // Simple split by " in " or " at "
+                val delimiters = arrayOf(" in ", " at ")
+                var currentText = raw
+                val path = mutableListOf<String>()
+                
+                // Heuristic: Last parts separated by " in " are usually locations
+                val parts = raw.split(" in ", " at ")
+                if (parts.size > 1) {
+                    val itemName = parts[0].trim()
+                    val locationPath = parts.drop(1).map { it.trim() }
+                    InterpretedIntent.AddItem(name = itemName, locationPath = locationPath)
+                } else {
+                    InterpretedIntent.AddItem(name = raw)
+                }
+            }
+            lowerText.contains("put ") || lowerText.contains("move ") -> {
+                 val parts = lowerText.split(" in ", " at ")
+                 if (parts.size > 1) {
+                     val itemName = parts[0].replace("put", "").replace("move", "").trim()
+                     val path = parts.drop(1).map { it.trim() }
+                     InterpretedIntent.AssignLocation(itemName = itemName, locationPath = path)
+                 } else InterpretedIntent.Unknown
             }
             lowerText.contains("taken") || lowerText.contains("borrow") -> {
                 // Simple heuristic: "Mark [item] as taken"

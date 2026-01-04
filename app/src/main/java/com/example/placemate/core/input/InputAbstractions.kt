@@ -13,12 +13,13 @@ sealed class InterpretedIntent {
         val name: String? = null,
         val category: String? = null,
         val description: String? = null,
-        val imageUri: Uri? = null
+        val imageUri: Uri? = null,
+        val locationPath: List<String>? = null
     ) : InterpretedIntent()
 
     data class AssignLocation(
         val itemName: String,
-        val locationName: String
+        val locationPath: List<String>
     ) : InterpretedIntent()
 
     data class MarkTaken(

@@ -53,6 +53,33 @@ class AddItemViewModel @Inject constructor(
                 name = result.suggestedName ?: _uiState.value.name,
                 category = result.suggestedCategory ?: _uiState.value.category
             )
+            // If AI suggested a location, we could resolve it here if we extend RecognitionResult
+        }
+    }
+
+    suspend fun resolveLocationPath(path: List<String>): com.example.placemate.data.local.entities.LocationEntity {
+        var parentId: String? = null
+        var lastLocation: com.example.placemate.data.local.entities.LocationEntity? = null
+        
+        path.forEachIndexed { index, name ->
+            val type = if (index == 0) com.example.placemate.data.local.entities.LocationType.ROOM else com.example.placemate.data.local.entities.LocationType.STORAGE
+            val existing = repository.getAllLocationsSync()?.find { it.name.equals(name, true) && it.parentId == parentId }
+            val entity = existing ?: repository.addLocationSync(name, type, parentId)
+            parentId = entity.id
+            lastLocation = entity
+        }
+        
+        return lastLocation ?: resolveLocationPath(listOf("Default Room"))
+    }
+
+    fun setLocationPath(path: List<String>) {
+        viewModelScope.launch {
+            val entity = resolveLocationPath(path)
+            val pathString = repository.getLocationPath(entity.id)
+            _uiState.value = _uiState.value.copy(
+                selectedLocationId = entity.id,
+                locationPath = pathString
+            )
         }
     }
 
@@ -67,6 +94,9 @@ class AddItemViewModel @Inject constructor(
                                 name = intent.name ?: _uiState.value.name,
                                 category = intent.category ?: _uiState.value.category
                             )
+                            intent.locationPath?.let { setLocationPath(it) }
+                        } else if (intent is InterpretedIntent.AssignLocation) {
+                             setLocationPath(intent.locationPath)
                         }
                     }
                     else -> { /* Handle other states if needed */ }
@@ -98,5 +128,6 @@ data class AddItemUiState(
     val notes: String = "",
     val imageUri: Uri? = null,
     val selectedLocationId: String? = null,
+    val locationPath: String = "Not Set",
     val isSaved: Boolean = false
 )

@@ -92,6 +92,10 @@ class AddItemFragment : Fragment() {
             checkAndRequestCameraPermission()
         }
 
+        binding.btnEditLocation.setOnClickListener {
+            showHierarchicalLocationDialog()
+        }
+
         binding.btnSave.setOnClickListener {
             viewModel.onNameChanged(binding.nameEditText.text.toString())
             viewModel.onCategoryChanged(binding.categoryEditText.text.toString())
@@ -102,22 +106,9 @@ class AddItemFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
-                    viewModel.availableLocations.collect { locations ->
-                        val locationNames = locations.map { it.name }
-                        val adapter = android.widget.ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, locationNames)
-                        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                        binding.locationSpinner.adapter = adapter
-                        
-                        binding.locationSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
-                            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
-                                viewModel.onLocationSelected(locations[position].id)
-                            }
-                            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
-                        }
-                    }
-                }
-                launch {
                     viewModel.uiState.collect { state ->
+                        binding.tvSelectedLocation.text = state.locationPath
+                        
                         if (state.name != binding.nameEditText.text.toString()) {
                             binding.nameEditText.setText(state.name)
                         }
@@ -132,6 +123,27 @@ class AddItemFragment : Fragment() {
             }
         }
 
+    }
+
+    private fun showHierarchicalLocationDialog() {
+        val input = android.widget.EditText(requireContext()).apply {
+            hint = "e.g. Living Room > Drawer > Box"
+            setText(viewModel.uiState.value.locationPath.takeIf { it != "Not Set" } ?: "")
+        }
+        
+        android.app.AlertDialog.Builder(requireContext())
+            .setTitle("Set Hierarchical Location")
+            .setMessage("Enter the path separated by '>'")
+            .setView(input)
+            .setPositiveButton("Set") { _, _ ->
+                val pathStr = input.text.toString()
+                if (pathStr.isNotEmpty()) {
+                    val path = pathStr.split(">").map { it.trim() }.filter { it.isNotEmpty() }
+                    viewModel.setLocationPath(path)
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun checkAndRequestCameraPermission() {
