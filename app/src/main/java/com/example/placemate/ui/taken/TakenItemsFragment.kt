@@ -41,12 +41,13 @@ class TakenItemsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
-        val adapter = com.example.placemate.ui.inventory.InventoryAdapter(
+        val adapter = InventoryAdapter(
             onItemClick = { item ->
                 val bundle = Bundle().apply { putString("itemId", item.id) }
                 findNavController().navigate(R.id.nav_item_detail, bundle)
             },
-            onFolderClick = { _ -> } // No folder navigation in Taken items
+            onFolderClick = { _ -> }, // No folder navigation in Taken items
+            onFolderLongClick = { _ -> } 
         )
 
         binding.recyclerView.layoutManager = LinearLayoutManager(requireContext())

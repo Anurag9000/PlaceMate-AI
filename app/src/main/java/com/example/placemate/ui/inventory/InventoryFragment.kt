@@ -19,6 +19,9 @@ import com.example.placemate.core.utils.ImageUtils
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import java.io.File
+import com.example.placemate.data.local.entities.ItemEntity
+import com.example.placemate.data.local.entities.LocationEntity
+import com.example.placemate.data.local.entities.LocationType
 
 @AndroidEntryPoint
 class InventoryFragment : Fragment() {
@@ -137,6 +140,9 @@ class InventoryFragment : Fragment() {
             },
             onFolderClick = { location ->
                 viewModel.navigateTo(location.id)
+            },
+            onFolderLongClick = { location ->
+                showLocationDialog(location)
             }
         )
 
@@ -314,6 +320,47 @@ class InventoryFragment : Fragment() {
             }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    private fun showLocationDialog(locationToEdit: com.example.placemate.data.local.entities.LocationEntity) {
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_add_location, null)
+        val nameInput = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.location_name_edit_text)
+        nameInput.setText(locationToEdit.name)
+        val typeSpinner = dialogView.findViewById<android.widget.Spinner>(R.id.type_spinner)
+        val parentSpinner = dialogView.findViewById<android.widget.Spinner>(R.id.parent_spinner)
+
+        // Setup type spinner
+        val types = com.example.placemate.data.local.entities.LocationType.values()
+        typeSpinner.adapter = android.widget.ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, types.map { it.name })
+        typeSpinner.setSelection(types.indexOf(locationToEdit.type))
+
+        // Setup parent spinner
+        // We need all locations to populate the parent spinner
+        viewLifecycleOwner.lifecycleScope.launch {
+            val allLocations = viewModel.getAllLocations() // We might need to add this to ViewModel
+            val filteredLocations = allLocations.filter { it.id != locationToEdit.id }
+            val parentNames = mutableListOf("None")
+            parentNames.addAll(filteredLocations.map { it.name })
+            parentSpinner.adapter = android.widget.ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, parentNames)
+            
+            val parentIndex = filteredLocations.indexOfFirst { it.id == locationToEdit.parentId }
+            if (parentIndex >= 0) parentSpinner.setSelection(parentIndex + 1)
+
+            android.app.AlertDialog.Builder(requireContext())
+                .setTitle("Edit Folder")
+                .setView(dialogView)
+                .setPositiveButton("Update") { _, _ ->
+                    val name = nameInput.text?.toString() ?: return@setPositiveButton
+                    val type = types[typeSpinner.selectedItemPosition]
+                    val pIndex = parentSpinner.selectedItemPosition
+                    val pId = if (pIndex == 0) null else filteredLocations[pIndex - 1].id
+
+                    viewModel.updateLocation(locationToEdit.id, name, type, pId)
+                    android.widget.Toast.makeText(requireContext(), "Folder updated!", android.widget.Toast.LENGTH_SHORT).show()
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
     }
 
     private fun showErrorDialog(title: String, message: String) {

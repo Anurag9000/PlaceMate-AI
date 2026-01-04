@@ -44,6 +44,9 @@ class HomeFragment : Fragment() {
                 // Dashboard also supports drill-down? For now, just go to Inventory
                 val bundle = Bundle().apply { putString("locationId", location.id) }
                 findNavController().navigate(R.id.nav_inventory, bundle)
+            },
+            onFolderLongClick = { _ ->
+                // No specific long-click action on home for now, or could show Toast
             }
         )
 

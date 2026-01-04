@@ -2,18 +2,18 @@ package com.example.placemate.ui.inventory
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import com.example.placemate.data.local.entities.ItemEntity
+import com.example.placemate.databinding.ItemInventoryBinding
+import com.example.placemate.data.local.entities.LocationEntity
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.example.placemate.data.local.entities.ItemEntity
-import com.example.placemate.databinding.ItemInventoryBinding
-
-import com.example.placemate.data.local.entities.LocationEntity
 
 class InventoryAdapter(
     private val onItemClick: (ItemEntity) -> Unit,
-    private val onFolderClick: (LocationEntity) -> Unit
-) : androidx.recyclerview.widget.ListAdapter<ExplorerItem, androidx.recyclerview.widget.RecyclerView.ViewHolder>(ExplorerDiffCallback()) {
+    private val onFolderClick: (LocationEntity) -> Unit,
+    private val onFolderLongClick: (LocationEntity) -> Unit
+) : ListAdapter<ExplorerItem, RecyclerView.ViewHolder>(ExplorerDiffCallback()) {
 
     companion object {
         private const val TYPE_FOLDER = 0
@@ -27,7 +27,7 @@ class InventoryAdapter(
         }
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): androidx.recyclerview.widget.RecyclerView.ViewHolder {
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         val inflater = LayoutInflater.from(parent.context)
         return if (viewType == TYPE_FOLDER) {
             val binding = ItemInventoryBinding.inflate(inflater, parent, false) 
@@ -38,14 +38,14 @@ class InventoryAdapter(
         }
     }
 
-    override fun onBindViewHolder(holder: androidx.recyclerview.widget.RecyclerView.ViewHolder, position: Int) {
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         when (val item = getItem(position)) {
             is ExplorerItem.Folder -> (holder as FolderViewHolder).bind(item)
             is ExplorerItem.File -> (holder as FileViewHolder).bind(item)
         }
     }
 
-    inner class FolderViewHolder(private val binding: ItemInventoryBinding) : androidx.recyclerview.widget.RecyclerView.ViewHolder(binding.root) {
+    inner class FolderViewHolder(private val binding: ItemInventoryBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(item: ExplorerItem.Folder) {
             binding.itemName.text = item.location.name
             binding.itemCategory.text = "Contains items..." // Placeholder count
@@ -53,13 +53,17 @@ class InventoryAdapter(
             binding.itemImage.setImageResource(android.R.drawable.ic_menu_more) // Folder icon placeholder
             
             binding.root.setOnClickListener { onFolderClick(item.location) }
+            binding.root.setOnLongClickListener {
+                onFolderLongClick(item.location)
+                true
+            }
             
             // Visual tweaks for folder
             binding.root.setCardBackgroundColor(android.graphics.Color.parseColor("#F0F4F8")) // Light blue/gray
         }
     }
 
-    inner class FileViewHolder(private val binding: ItemInventoryBinding) : androidx.recyclerview.widget.RecyclerView.ViewHolder(binding.root) {
+    inner class FileViewHolder(private val binding: ItemInventoryBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(item: ExplorerItem.File) {
             val entity = item.item
             binding.itemName.text = entity.name

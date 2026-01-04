@@ -209,4 +209,21 @@ class InventoryViewModel @Inject constructor(
             refreshExplorer()
         }
     }
+
+    fun updateLocation(id: String, name: String, type: LocationType, parentId: String?) {
+        viewModelScope.launch {
+            val updated = LocationEntity(
+                id = id,
+                name = name,
+                type = type,
+                parentId = parentId
+            )
+            repository.updateLocation(updated)
+            refreshExplorer()
+        }
+    }
+
+    suspend fun getAllLocations(): List<LocationEntity> {
+        return repository.getAllLocationsSync() ?: emptyList()
+    }
 }
