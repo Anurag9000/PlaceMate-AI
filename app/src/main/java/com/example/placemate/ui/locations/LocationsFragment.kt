@@ -41,8 +41,8 @@ class LocationsFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         
         val adapter = LocationAdapter { location ->
-            // Navigate to InventoryFragment with search query
-            val bundle = Bundle().apply { putString("searchQuery", location.name) }
+            // Navigate to InventoryFragment with locationId for drill-down
+            val bundle = Bundle().apply { putString("locationId", location.id) }
             androidx.navigation.fragment.NavHostFragment.findNavController(this).navigate(R.id.nav_inventory, bundle)
         }
 

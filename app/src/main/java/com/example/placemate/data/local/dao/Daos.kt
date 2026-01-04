@@ -22,12 +22,21 @@ interface InventoryDao {
     suspend fun deleteItem(item: ItemEntity)
 
     @Query("""
-        SELECT DISTINCT i.* FROM items i 
-        LEFT JOIN item_placements p ON i.id = p.itemId 
-        LEFT JOIN locations l ON p.locationId = l.id 
-        WHERE i.name LIKE '%' || :query || '%' 
-        OR i.category LIKE '%' || :query || '%' 
-        OR l.name LIKE '%' || :query || '%'
+        WITH RECURSIVE
+          matching_locations AS (
+            -- Base case: locations that match the query directly
+            SELECT id FROM locations WHERE name LIKE '%' || :query || '%'
+            UNION ALL
+            -- Recursive step: all children of matching locations
+            SELECT l.id FROM locations l
+            JOIN matching_locations ml ON l.parentId = ml.id
+          )
+        SELECT DISTINCT i.* FROM items i
+        LEFT JOIN item_placements p ON i.id = p.itemId
+        LEFT JOIN locations l ON p.locationId = l.id
+        WHERE i.name LIKE '%' || :query || '%'
+        OR i.category LIKE '%' || :query || '%'
+        OR p.locationId IN matching_locations
     """)
     fun searchItems(query: String): Flow<List<ItemEntity>>
 

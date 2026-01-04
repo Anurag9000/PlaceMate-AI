@@ -207,6 +207,10 @@ class InventoryFragment : Fragment() {
             viewModel.updateSearchQuery(query)
         }
 
+        arguments?.getString("locationId")?.let { locId ->
+            viewModel.navigateTo(locId)
+        }
+
         val menuHost: androidx.core.view.MenuHost = requireActivity()
         menuHost.addMenuProvider(object : androidx.core.view.MenuProvider {
             override fun onCreateMenu(menu: android.view.Menu, menuInflater: android.view.MenuInflater) {
