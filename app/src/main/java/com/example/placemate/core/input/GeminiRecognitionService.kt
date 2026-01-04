@@ -78,7 +78,7 @@ class GeminiRecognitionService @Inject constructor(
             })
 
             val text = response.text ?: ""
-            android.util.Log.d("GeminiService", "Raw Response: $text")
+// Removed debug log
             val jsonStr = extractJson(text)
             if (jsonStr.isEmpty()) return@withContext RecognitionResult(null, null, 0f, errorMessage = "Could not parse AI response")
 
@@ -127,7 +127,7 @@ class GeminiRecognitionService @Inject constructor(
             })
 
             val text = response.text ?: ""
-            android.util.Log.d("GeminiService", "Raw Scene Response: $text")
+// Removed debug log
             val jsonStr = extractJson(text)
             if (jsonStr.isEmpty()) return@withContext SceneRecognitionResult(emptyList(), "AI returned invalid JSON format")
 
