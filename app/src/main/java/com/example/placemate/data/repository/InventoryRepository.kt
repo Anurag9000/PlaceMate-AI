@@ -37,6 +37,11 @@ class InventoryRepository @Inject constructor(
 
     suspend fun updateLocation(location: LocationEntity) = locationDao.updateLocation(location)
 
+    suspend fun getLocationPathForItem(itemId: String): String {
+        val location = inventoryDao.getLocationForItem(itemId) ?: return "Root"
+        return getLocationPath(location.id)
+    }
+
     suspend fun getLocationForItem(itemId: String): LocationEntity? = inventoryDao.getLocationForItem(itemId)
 
     suspend fun getLocationPath(locationId: String): String {

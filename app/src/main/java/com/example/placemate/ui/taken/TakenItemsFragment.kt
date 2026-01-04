@@ -57,6 +57,10 @@ class TakenItemsFragment : Fragment() {
             startSpeechSearch()
         }
 
+        binding.cardOmniSearch.setOnClickListener {
+            findNavController().navigate(R.id.nav_omni_search)
+        }
+
         binding.searchEditText.addTextChangedListener(object : android.text.TextWatcher {
             override fun afterTextChanged(s: android.text.Editable?) {
                 val query = s?.toString()?.lowercase() ?: ""

@@ -82,6 +82,10 @@ class HomeFragment : Fragment() {
         binding.btnHomeAdd.setOnClickListener {
             findNavController().navigate(R.id.nav_add_item)
         }
+
+        binding.cardOmniSearch.setOnClickListener {
+            findNavController().navigate(R.id.nav_omni_search)
+        }
         
         binding.cardAiStatus.setOnClickListener {
             findNavController().navigate(R.id.nav_settings)

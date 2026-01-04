@@ -174,7 +174,11 @@ class InventoryViewModel @Inject constructor(
         _refreshTrigger
     ) { locId, query, _ ->
         if (query.isNotEmpty()) {
-            repository.searchItems(query).first().map { ExplorerItem.File(it) }
+            val items = repository.searchItems(query).first()
+            items.map { item ->
+                val path = repository.getLocationPathForItem(item.id)
+                ExplorerItem.File(item, path)
+            }
         } else {
             repository.getExplorerContent(locId)
         }

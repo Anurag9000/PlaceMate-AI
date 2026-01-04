@@ -71,7 +71,7 @@ class InventoryAdapter(
         fun bind(item: ExplorerItem.File) {
             val entity = item.item
             binding.itemName.text = entity.name
-            binding.itemCategory.text = entity.category
+            binding.itemCategory.text = item.locationPath ?: entity.category
             binding.itemStatus.text = entity.status.name
              if (!entity.photoUri.isNullOrEmpty()) {
                 binding.itemImage.setImageURI(android.net.Uri.parse(entity.photoUri))

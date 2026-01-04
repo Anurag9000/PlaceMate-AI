@@ -189,6 +189,10 @@ class InventoryFragment : Fragment() {
             showClearDataConfirmation()
         }
 
+        binding.cardOmniSearch.setOnClickListener {
+            findNavController().navigate(R.id.nav_omni_search)
+        }
+
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 // Collect Explorer State
