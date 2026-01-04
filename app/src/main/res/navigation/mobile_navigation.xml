@@ -86,4 +86,10 @@
         android:label="OmniSearch"
         tools:layout="@layout/fragment_omni_search" />
 
+    <fragment
+        android:id="@+id/nav_sentinel"
+        android:name="com.example.placemate.ui.sentinel.SentinelFragment"
+        android:label="@string/title_sentinel"
+        tools:layout="@layout/fragment_sentinel" />
+
 </navigation>

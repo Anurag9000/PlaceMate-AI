@@ -16,5 +16,9 @@
             android:id="@+id/nav_taken_items"
             android:icon="@android:drawable/ic_menu_myplaces"
             android:title="@string/menu_taken_items" />
+        <item
+            android:id="@+id/nav_sentinel"
+            android:icon="@android:drawable/ic_menu_view"
+            android:title="@string/menu_sentinel" />
     </group>
 </menu>
