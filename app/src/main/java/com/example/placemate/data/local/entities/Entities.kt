@@ -8,7 +8,11 @@ import java.util.UUID
 
 @Entity(
     tableName = "items",
-    indices = [Index(value = ["name"], unique = true)]
+    indices = [
+        Index(value = ["name"]),
+        Index(value = ["category"]),
+        Index(value = ["status"])
+    ]
 )
 data class ItemEntity(
     @PrimaryKey val id: String = UUID.randomUUID().toString(),
@@ -27,7 +31,18 @@ enum class ItemStatus {
 
 @Entity(
     tableName = "locations",
-    indices = [Index(value = ["name", "parentId"], unique = true)]
+    indices = [
+        Index(value = ["name", "parentId"], unique = true),
+        Index(value = ["parentId"])
+    ],
+    foreignKeys = [
+        ForeignKey(
+            entity = LocationEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["parentId"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ]
 )
 data class LocationEntity(
     @PrimaryKey val id: String = UUID.randomUUID().toString(),

@@ -1,19 +1,7 @@
-package com.example.placemate.ui.locations
-
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.Toast
-import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
-import androidx.recyclerview.widget.LinearLayoutManager
-import com.example.placemate.R
-import com.example.placemate.databinding.FragmentLocationsBinding
-
+import com.example.placemate.data.local.entities.LocationEntity
+import com.example.placemate.data.local.entities.LocationType
+import com.example.placemate.data.local.entities.ItemEntity
+import com.example.placemate.core.input.SpeechState
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -40,14 +28,12 @@ class LocationsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
-        val adapter = LocationAdapter(
-            onItemClick = { location ->
-                // Navigate to InventoryFragment with locationId for drill-down
-                val bundle = Bundle().apply { putString("locationId", location.id) }
+            onItemClick = { itemWithCount ->
+                val bundle = Bundle().apply { putString("locationId", itemWithCount.location.id) }
                 androidx.navigation.fragment.NavHostFragment.findNavController(this).navigate(R.id.nav_inventory, bundle)
             },
-            onItemLongClick = { location ->
-                showLocationDialog(location)
+            onItemLongClick = { itemWithCount ->
+                showLocationDialog(itemWithCount.location)
             }
         )
 
@@ -80,15 +66,17 @@ class LocationsFragment : Fragment() {
 
     private fun startSpeechLocation() {
         viewLifecycleOwner.lifecycleScope.launch {
-            speechManager.startListening().collect { state ->
-                if (state is com.example.placemate.core.input.SpeechState.Result) {
-                    showLocationDialog(initialName = state.text)
+            viewLifecycleOwner.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+                speechManager.startListening().collect { state ->
+                    if (state is SpeechState.Result) {
+                        showLocationDialog(initialName = state.text)
+                    }
                 }
             }
         }
     }
 
-    private fun showLocationDialog(locationToEdit: com.example.placemate.data.local.entities.LocationEntity? = null, initialName: String = "") {
+    private fun showLocationDialog(locationToEdit: LocationEntity? = null, initialName: String = "") {
         val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_add_location, null)
         val nameInput = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.location_name_edit_text)
         nameInput.setText(locationToEdit?.name ?: initialName)
@@ -96,12 +84,12 @@ class LocationsFragment : Fragment() {
         val parentSpinner = dialogView.findViewById<android.widget.Spinner>(R.id.parent_spinner)
 
         // Setup type spinner
-        val types = com.example.placemate.data.local.entities.LocationType.values()
+        val types = LocationType.values()
         typeSpinner.adapter = android.widget.ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, types.map { it.name })
         locationToEdit?.let { typeSpinner.setSelection(types.indexOf(it.type)) }
 
         // Setup parent spinner
-        val locations = viewModel.locations.value.filter { it.id != locationToEdit?.id }
+        val locations = viewModel.locations.value.map { it.location }.filter { it.id != locationToEdit?.id }
         val parentNames = mutableListOf("None")
         parentNames.addAll(locations.map { it.name })
         parentSpinner.adapter = android.widget.ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, parentNames)
@@ -140,8 +128,8 @@ class LocationsFragment : Fragment() {
     }
 
     private fun showDuplicateWarning(
-        existingLocation: com.example.placemate.data.local.entities.LocationEntity,
-        items: List<com.example.placemate.data.local.entities.ItemEntity>,
+        existingLocation: LocationEntity,
+        items: List<ItemEntity>,
         onConfirm: () -> Unit
     ) {
         val message = StringBuilder()

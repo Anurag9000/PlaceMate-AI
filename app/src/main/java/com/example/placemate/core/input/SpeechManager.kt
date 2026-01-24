@@ -13,41 +13,60 @@ import kotlinx.coroutines.flow.callbackFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
 @Singleton
 class SpeechManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     fun startListening(): Flow<SpeechState> = callbackFlow {
-        val speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context)
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+        if (androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) 
+            != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            trySend(SpeechState.Error("Microphone permission not granted"))
+            close()
+            return@callbackFlow
         }
 
-        val listener = object : RecognitionListener {
-            override fun onReadyForSpeech(params: Bundle?) { trySend(SpeechState.Ready) }
-            override fun onBeginningOfSpeech() { trySend(SpeechState.Listening) }
-            override fun onRmsChanged(rmsdB: Float) {}
-            override fun onBufferReceived(buffer: ByteArray?) {}
-            override fun onEndOfSpeech() { trySend(SpeechState.Processing) }
-            override fun onError(error: Int) { trySend(SpeechState.Error("Speech Error: $error")) }
-            override fun onResults(results: Bundle?) {
-                val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                matches?.firstOrNull()?.let { trySend(SpeechState.Result(it)) }
-                close()
+        withContext(Dispatchers.Main) {
+            val speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context)
+            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             }
-            override fun onPartialResults(partialResults: Bundle?) {
-                val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                matches?.firstOrNull()?.let { trySend(SpeechState.PartialResult(it)) }
+
+            val listener = object : RecognitionListener {
+                override fun onReadyForSpeech(params: Bundle?) { trySend(SpeechState.Ready) }
+                override fun onBeginningOfSpeech() { trySend(SpeechState.Listening) }
+                override fun onRmsChanged(rmsdB: Float) {}
+                override fun onBufferReceived(buffer: ByteArray?) {}
+                override fun onEndOfSpeech() { trySend(SpeechState.Processing) }
+                override fun onError(error: Int) { 
+                    val message = when (error) {
+                        SpeechRecognizer.ERROR_NO_MATCH -> "No speech match"
+                        SpeechRecognizer.ERROR_NETWORK -> "Network error"
+                        else -> "Speech Error: $error"
+                    }
+                    trySend(SpeechState.Error(message)) 
+                }
+                override fun onResults(results: Bundle?) {
+                    val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                    matches?.firstOrNull()?.let { trySend(SpeechState.Result(it)) }
+                    close()
+                }
+                override fun onPartialResults(partialResults: Bundle?) {
+                    val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                    matches?.firstOrNull()?.let { trySend(SpeechState.PartialResult(it)) }
+                }
+                override fun onEvent(eventType: Int, params: Bundle?) {}
             }
-            override fun onEvent(eventType: Int, params: Bundle?) {}
-        }
 
-        speechRecognizer.setRecognitionListener(listener)
-        speechRecognizer.startListening(intent)
+            speechRecognizer.setRecognitionListener(listener)
+            speechRecognizer.startListening(intent)
 
-        awaitClose {
-            speechRecognizer.destroy()
+            awaitClose {
+                speechRecognizer.destroy()
+            }
         }
     }
 }

@@ -1,24 +1,10 @@
-package com.example.placemate.ui.search
-
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import androidx.core.widget.addTextChangedListener
-import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
-import androidx.lifecycle.lifecycleScope
-import androidx.navigation.fragment.findNavController
-import androidx.recyclerview.widget.LinearLayoutManager
-import com.example.placemate.R
-import com.example.placemate.core.input.ItemRecognitionService
-import com.example.placemate.core.utils.ImageUtils
-import com.example.placemate.databinding.FragmentOmniSearchBinding
-import com.example.placemate.ui.inventory.InventoryAdapter
-import com.example.placemate.ui.inventory.InventoryViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import com.example.placemate.core.input.SpeechState
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import java.io.File
+import android.net.Uri
 
 @AndroidEntryPoint
 class OmniSearchFragment : Fragment() {
@@ -53,11 +39,11 @@ class OmniSearchFragment : Fragment() {
         androidx.activity.result.contract.ActivityResultContracts.TakePicture()
     ) { success ->
         if (success) {
-            photoFile?.let { file ->
-                val uri = android.net.Uri.fromFile(file)
-                binding.progressBar.visibility = View.VISIBLE
                 viewLifecycleOwner.lifecycleScope.launch {
-                    val result = recognitionService.recognizeItem(uri)
+                    binding.progressBar.visibility = View.VISIBLE
+                    val uri = Uri.fromFile(file)
+                    val hint = viewModel.getLocationContextHint()
+                    val result = recognitionService.recognizeItem(uri, hint)
                     binding.progressBar.visibility = View.GONE
                     result.suggestedName?.let { name ->
                         binding.etSearch.setText(name)
@@ -99,10 +85,13 @@ class OmniSearchFragment : Fragment() {
         binding.btnCameraSearch.setOnClickListener { startCameraSearch() }
 
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.explorerItems.collect { items ->
-                adapter.submitList(items)
-                binding.tvEmptyState.visibility = if (items.isEmpty() && binding.etSearch.text.isNotEmpty()) View.VISIBLE else if (binding.etSearch.text.isEmpty()) View.VISIBLE else View.GONE
-                binding.tvEmptyState.text = if (binding.etSearch.text.isEmpty()) "Try searching for something..." else "No matches found."
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.explorerItems.collect { items ->
+                    adapter.submitList(items)
+                    val query = binding.etSearch.text.toString()
+                    binding.tvEmptyState.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
+                    binding.tvEmptyState.text = if (query.isEmpty()) "Try searching for something..." else "No matches found."
+                }
             }
         }
     }
@@ -132,13 +121,19 @@ class OmniSearchFragment : Fragment() {
     private fun launchSpeechRecognition() {
         binding.progressBar.visibility = View.VISIBLE
         viewLifecycleOwner.lifecycleScope.launch {
-            speechManager.startListening().collect { state ->
-                if (state is com.example.placemate.core.input.SpeechState.Result) {
-                    binding.progressBar.visibility = View.GONE
-                    binding.etSearch.setText(state.text)
-                    viewModel.updateSearchQuery(state.text)
-                } else if (state is com.example.placemate.core.input.SpeechState.Error) {
-                    binding.progressBar.visibility = View.GONE
+            viewLifecycleOwner.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+                speechManager.startListening().collect { state ->
+                    when (state) {
+                        is SpeechState.Result -> {
+                            binding.progressBar.visibility = View.GONE
+                            binding.etSearch.setText(state.text)
+                            viewModel.updateSearchQuery(state.text)
+                        }
+                        is SpeechState.Error -> {
+                            binding.progressBar.visibility = View.GONE
+                        }
+                        else -> {}
+                    }
                 }
             }
         }

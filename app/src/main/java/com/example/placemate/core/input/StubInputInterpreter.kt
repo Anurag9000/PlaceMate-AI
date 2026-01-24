@@ -18,46 +18,42 @@ class StubInputInterpreter @Inject constructor(
     }
 
     private fun interpretText(text: String): InterpretedIntent {
-        val lowerText = text.lowercase()
+        val lowerText = text.trim().lowercase()
+        
+        // Regex Patterns for better robustness
+        // Matches: "add [item] to [location]", "put [item] in [location]"
+        val addPattern = Regex("""^(?:add|put|place|store)\s+(.+?)\s+(?:in|at|to|on)\s+(.+)$""")
+        // Matches: "add [item]" (simple)
+        val addSimplePattern = Regex("""^(?:add|create|new)\s+(.+)$""")
+        
         return when {
-            lowerText.startsWith("add ") -> {
-                val raw = text.substring(4).trim()
-                // Pattern: "add [Item] in [Location] in [Sub-Location]..."
-                // Simple split by " in " or " at "
-                val delimiters = arrayOf(" in ", " at ")
-                var currentText = raw
-                val path = mutableListOf<String>()
-                
-                // Heuristic: Last parts separated by " in " are usually locations
-                val parts = raw.split(" in ", " at ")
-                if (parts.size > 1) {
-                    val itemName = parts[0].trim()
-                    val locationPath = parts.drop(1).map { it.trim() }
-                    InterpretedIntent.AddItem(name = itemName, locationPath = locationPath)
-                } else {
-                    InterpretedIntent.AddItem(name = raw)
-                }
+            // Priority 1: Location Assignment (Add/Move to Location)
+            addPattern.matches(lowerText) -> {
+                val match = addPattern.find(lowerText) ?: return InterpretedIntent.Unknown
+                val (itemName, locationRaw) = match.destructured
+                val locationPath = locationRaw.split(Regex(" (?:in|at|on) ")).map { it.trim() }
+                InterpretedIntent.AddItem(name = itemName.trim(), locationPath = locationPath)
             }
-            lowerText.contains("put ") || lowerText.contains("move ") -> {
-                 val parts = lowerText.split(" in ", " at ")
-                 if (parts.size > 1) {
-                     val itemName = parts[0].replace("put", "").replace("move", "").trim()
-                     val path = parts.drop(1).map { it.trim() }
-                     InterpretedIntent.AssignLocation(itemName = itemName, locationPath = path)
-                 } else InterpretedIntent.Unknown
+            
+            // Priority 2: Simple Add
+            addSimplePattern.matches(lowerText) -> {
+                val match = addSimplePattern.find(lowerText) ?: return InterpretedIntent.Unknown
+                val itemName = match.groupValues[1].trim()
+                InterpretedIntent.AddItem(name = itemName)
             }
+
+            // Priority 3: Status Updates
             lowerText.contains("taken") || lowerText.contains("borrow") -> {
-                // Simple heuristic: "Mark [item] as taken"
-                val itemName = text.replace("mark", "")
-                    .replace("as taken", "")
-                    .replace("borrowed", "")
-                    .trim()
-                InterpretedIntent.MarkTaken(itemName = itemName)
+                 val itemName = text.replace(Regex("""\b(mark|as|taken|borrowed|is)\b""", RegexOption.IGNORE_CASE), "").trim()
+                 InterpretedIntent.MarkTaken(itemName = itemName)
             }
-            lowerText.contains("returned") -> {
-                val itemName = text.replace("returned", "").trim()
+            
+            lowerText.contains("returned") || lowerText.contains("back") -> {
+                val itemName = text.replace(Regex("""\b(mark|as|returned|brought|back|is)\b""", RegexOption.IGNORE_CASE), "").trim()
                 InterpretedIntent.MarkReturned(itemName = itemName)
             }
+
+            // Priority 4: Search (Fallback)
             else -> {
                 val normalizedQuery = synonymManager.getRepresentativeName(text)
                 InterpretedIntent.Search(query = normalizedQuery)

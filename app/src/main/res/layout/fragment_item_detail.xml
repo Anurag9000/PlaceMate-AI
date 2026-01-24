@@ -32,6 +32,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:background="#EEE"
+                        android:contentDescription="Item Photo"
                         android:scaleType="centerCrop"
                         tools:src="@android:drawable/ic_menu_gallery" />
 
@@ -41,6 +42,7 @@
                         android:layout_height="wrap_content"
                         android:layout_gravity="bottom|end"
                         android:layout_margin="16dp"
+                        android:contentDescription="Change Photo"
                         app:fabSize="mini"
                         app:srcCompat="@android:drawable/ic_menu_camera"
                         app:tint="@android:color/white" />
@@ -65,7 +67,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:hint="Item Name"
+                android:hint="@string/label_name"
                 app:layout_constraintTop_toBottomOf="@id/text_item_status">
 
                 <com.google.android.material.textfield.TextInputEditText
@@ -80,7 +82,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:hint="Category"
+                android:hint="@string/label_category"
                 app:layout_constraintTop_toBottomOf="@id/layout_item_name">
 
                 <com.google.android.material.textfield.TextInputEditText
@@ -105,7 +107,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:hint="Notes / Description"
+                android:hint="@string/label_notes"
                 app:layout_constraintTop_toBottomOf="@id/text_item_location">
 
                 <com.google.android.material.textfield.TextInputEditText
@@ -121,7 +123,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
-                android:text="Save Changes"
+                android:text="@string/btn_save_changes"
                 app:layout_constraintTop_toBottomOf="@id/layout_item_notes" />
 
             <Button
@@ -139,7 +141,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Delete Item"
+                android:text="@string/btn_delete_item"
                 android:textColor="@android:color/holo_red_dark"
                 app:layout_constraintTop_toBottomOf="@id/btn_action" />
 

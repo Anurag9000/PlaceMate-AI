@@ -53,25 +53,26 @@ class HomeFragment : Fragment() {
         binding.rvRecentActivity.layoutManager = LinearLayoutManager(requireContext())
         binding.rvRecentActivity.adapter = adapter
 
-        // Bind Stats
+        // Bind UI State
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.totalItemsCount.collect { count ->
-                binding.tvTotalItemsCount.text = count.toString()
+            viewLifecycleOwner.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+                launch {
+                    viewModel.totalItemsCount.collect { count ->
+                        binding.tvTotalItemsCount.text = count.toString()
+                    }
+                }
+                launch {
+                    viewModel.takenItemsCount.collect { count ->
+                        binding.tvMissingItemsCount.text = count.toString()
+                    }
+                }
+                launch {
+                    viewModel.aiEngineStatus.collect { status ->
+                        binding.tvAiEngine.text = "AI Engine: $status"
+                    }
+                }
             }
         }
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.takenItemsCount.collect { count ->
-                binding.tvMissingItemsCount.text = count.toString()
-            }
-        }
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.recentItems.collect { items ->
-                adapter.submitList(items)
-            }
-        }
-
-        binding.tvAiEngine.text = "AI Engine: ${viewModel.aiEngineStatus}"
 
         // Deep links from dashboard
         binding.btnHomeScan.setOnClickListener {

@@ -5,8 +5,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.example.placemate.databinding.FragmentSettingsBinding
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -14,11 +15,7 @@ import kotlinx.coroutines.launch
 @AndroidEntryPoint
 class SettingsFragment : Fragment() {
 
-    @javax.inject.Inject
-    lateinit var settingsRepository: com.example.placemate.data.repository.SettingsRepository
-
-    @javax.inject.Inject
-    lateinit var modelRepository: com.example.placemate.data.repository.ModelRepository
+    private val viewModel: SettingsViewModel by viewModels()
 
     private var _binding: FragmentSettingsBinding? = null
     private val binding get() = _binding!!
@@ -35,54 +32,8 @@ class SettingsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Load existing settings
-        val currentApiKey = settingsRepository.getGeminiApiKey()
-        binding.editApiKey.setText(currentApiKey)
-        
-        binding.editCustomPrompt.setText(settingsRepository.getCustomGeminiPrompt())
-
-        // Model Refresh Logic
         binding.btnRefreshModels.setOnClickListener {
-            val apiKey = binding.editApiKey.text.toString()
-            if (apiKey.isBlank()) {
-                Toast.makeText(requireContext(), "Enter API Key first", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            
-            binding.btnRefreshModels.isEnabled = false
-            binding.btnRefreshModels.text = "Loading..."
-            
-            viewLifecycleOwner.lifecycleScope.launch {
-                val models = modelRepository.fetchAvailableModels(apiKey)
-                binding.btnRefreshModels.isEnabled = true
-                binding.btnRefreshModels.text = "Refresh List"
-                
-                if (models.isNotEmpty()) {
-                    val adapter = android.widget.ArrayAdapter(
-                        requireContext(),
-                        android.R.layout.simple_spinner_item,
-                        models.map { "${it.name} (${it.displayName})" }
-                    )
-                    adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                    binding.spinnerGeminiModel.adapter = adapter
-                    
-                    // Try to re-select current model
-                    val current = settingsRepository.getSelectedGeminiModel()
-                    val index = models.indexOfFirst { it.name == current }
-                    if (index >= 0) binding.spinnerGeminiModel.setSelection(index)
-                    
-                    Toast.makeText(requireContext(), "Found ${models.size} models", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(requireContext(), "No models found or key invalid", Toast.LENGTH_LONG).show()
-                }
-            }
-        }
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            settingsRepository.reminderCadenceHours.collect { hours ->
-                binding.cadenceSlider.value = hours.toFloat()
-                binding.textCadenceValue.text = "$hours hours"
-            }
+            viewModel.fetchModels()
         }
 
         binding.textGetKeyLink.setOnClickListener {
@@ -91,56 +42,68 @@ class SettingsFragment : Fragment() {
         }
 
         binding.cadenceSlider.addOnChangeListener { _, value, _ ->
-            binding.textCadenceValue.text = "${value.toInt()} hours"
-        }
-
-        // Toggle state
-        binding.switchUseGemini.isChecked = settingsRepository.isGeminiEnabled()
-        binding.layoutApiKey.isEnabled = binding.switchUseGemini.isChecked
-        binding.spinnerGeminiModel.isEnabled = binding.switchUseGemini.isChecked
-
-        // Initial Model Logic (Fallback to XML if no dynamic list yet, or implemented slightly differently)
-        // For now, we'll keep the XML list as default until user refreshes
-        val models = resources.getStringArray(com.example.placemate.R.array.gemini_models)
-        val currentModel = settingsRepository.getSelectedGeminiModel() 
-        val modelIndex = models.indexOfFirst { it.startsWith(currentModel) }
-        if (modelIndex >= 0) {
-            binding.spinnerGeminiModel.setSelection(modelIndex)
+            viewModel.onCadenceChanged(value.toInt())
         }
 
         binding.switchUseGemini.setOnCheckedChangeListener { _, isChecked ->
-            binding.layoutApiKey.isEnabled = isChecked
-            binding.spinnerGeminiModel.isEnabled = isChecked
-            binding.layoutCustomPrompt.isEnabled = isChecked
-            binding.btnResetPrompt.isEnabled = isChecked
+            viewModel.onUseGeminiChanged(isChecked)
         }
 
         binding.btnResetPrompt.setOnClickListener {
-            settingsRepository.resetGeminiPrompt()
-            binding.editCustomPrompt.setText(settingsRepository.getCustomGeminiPrompt())
-            Toast.makeText(requireContext(), "Prompt reset to default", Toast.LENGTH_SHORT).show()
+            viewModel.resetPrompt()
         }
 
         binding.btnSaveSettings.setOnClickListener {
-            val apiKey = binding.editApiKey.text?.toString() ?: ""
-            val useGemini = binding.switchUseGemini.isChecked
-            val selectedModelString = binding.spinnerGeminiModel.selectedItem.toString()
-            val selectedModel = selectedModelString.split(" ")[0] // Extract "gemini-1.5-flash" from "gemini-1.5-flash (Fastest...)"
-            
-            if (useGemini && apiKey.isBlank()) {
-                Toast.makeText(requireContext(), "Please enter a Gemini API Key to enable it.", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
+            viewModel.onApiKeyChanged(binding.editApiKey.text.toString())
+            viewModel.onPromptChanged(binding.editCustomPrompt.text.toString())
+            val selectedModel = binding.spinnerGeminiModel.selectedItem?.toString() ?: ""
+            viewModel.onModelSelected(selectedModel)
+            viewModel.saveSettings()
+        }
 
-            viewLifecycleOwner.lifecycleScope.launch {
-                settingsRepository.updateReminderCadence(binding.cadenceSlider.value.toInt())
-                settingsRepository.updateGeminiApiKey(apiKey)
-                settingsRepository.setUseGemini(useGemini)
-                settingsRepository.setSelectedGeminiModel(selectedModel)
-                settingsRepository.updateCustomGeminiPrompt(binding.editCustomPrompt.text.toString())
-                Toast.makeText(requireContext(), "Settings saved! Using $selectedModel", Toast.LENGTH_SHORT).show()
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.uiState.collect { state ->
+                    if (binding.editApiKey.text.toString() != state.apiKey && !binding.editApiKey.hasFocus()) {
+                        binding.editApiKey.setText(state.apiKey)
+                    }
+                    if (binding.editCustomPrompt.text.toString() != state.customPrompt && !binding.editCustomPrompt.hasFocus()) {
+                        binding.editCustomPrompt.setText(state.customPrompt)
+                    }
+                    
+                    binding.switchUseGemini.isChecked = state.useGemini
+                    binding.layoutApiKey.isEnabled = state.useGemini
+                    binding.spinnerGeminiModel.isEnabled = state.useGemini
+                    binding.layoutCustomPrompt.isEnabled = state.useGemini
+                    binding.btnResetPrompt.isEnabled = state.useGemini
+                    
+                    binding.cadenceSlider.value = state.reminderCadence.toFloat()
+                    binding.textCadenceValue.text = "${state.reminderCadence} hours"
+
+                    if (state.availableModels.isNotEmpty()) {
+                        val adapter = android.widget.ArrayAdapter(
+                            requireContext(),
+                            android.R.layout.simple_spinner_item,
+                            state.availableModels
+                        )
+                        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                        binding.spinnerGeminiModel.adapter = adapter
+                        
+                        val index = state.availableModels.indexOfFirst { it.startsWith(state.selectedModel) }
+                        if (index >= 0) binding.spinnerGeminiModel.setSelection(index)
+                    }
+
+                    binding.btnRefreshModels.isEnabled = !state.isLoadingModels
+                    binding.btnRefreshModels.text = if (state.isLoadingModels) "Loading..." else "Refresh List"
+
+                    if (state.saveSuccess) {
+                        Toast.makeText(requireContext(), "Settings saved!", Toast.LENGTH_SHORT).show()
+                        viewModel.consumeSaveSuccess()
+                    }
+                }
             }
         }
+    }
     }
 
     override fun onDestroyView() {

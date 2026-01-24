@@ -40,7 +40,7 @@ class MLKitRecognitionService @Inject constructor(
         return best
     }
 
-    override suspend fun recognizeItem(imageUri: Uri): RecognitionResult {
+    override suspend fun recognizeItem(imageUri: Uri, contextHint: String?): RecognitionResult {
         return try {
             val image = InputImage.fromFilePath(context, imageUri)
             val labels: List<ImageLabel> = labeler.process(image).await()
@@ -94,5 +94,8 @@ class MLKitRecognitionService @Inject constructor(
         } catch (e: Exception) {
             SceneRecognitionResult(emptyList())
         }
+    }
+    override suspend fun findVisualMatch(targetUri: Uri, candidates: List<VisualCandidate>): String? {
+        return null // MLKit local model doesn't support visual comparison easily
     }
 }

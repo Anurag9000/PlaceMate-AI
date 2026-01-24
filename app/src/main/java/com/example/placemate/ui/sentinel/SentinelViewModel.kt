@@ -8,9 +8,12 @@ import com.example.placemate.data.local.entities.ItemEntity
 import com.example.placemate.data.local.entities.LocationEntity
 import com.example.placemate.data.repository.InventoryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 
 data class AuditItem(
@@ -31,49 +34,44 @@ class SentinelViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _auditResults = MutableStateFlow<List<AuditItem>>(emptyList())
-    val auditResults: StateFlow<List<AuditItem>> = _auditResults
+    val auditResults: StateFlow<List<AuditItem>> = _auditResults.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    private val _locations = MutableStateFlow<List<LocationEntity>>(emptyList())
-    val locations: StateFlow<List<LocationEntity>> = _locations
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
 
-    init {
-        loadLocations()
-    }
-
-    private fun loadLocations() {
-        viewModelScope.launch {
-            _locations.value = repository.getAllLocationsSync() ?: emptyList()
-        }
-    }
+    val locations: StateFlow<List<LocationEntity>> = repository.getAllLocations()
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     fun performAudit(imageUri: Uri, targetLocationId: String) {
         viewModelScope.launch {
-            _isLoading.value = true
+            _error.update { null }
+            _isLoading.update { true }
             try {
                 // 1. Get current items in that location
                 val dbItems = repository.getItemsForLocation(targetLocationId)
                 
                 // 2. Perform AI Recognition
-                // We pass the location name as hint to improve context
-                val targetLoc = _locations.value.find { it.id == targetLocationId }
+                val targetLoc = locations.value.find { it.id == targetLocationId }
                 val sceneResult = recognitionService.recognizeScene(imageUri, targetLoc?.name)
                 
                 if (sceneResult.errorMessage != null) {
-                    // Handle error (maybe via a state? for now just empty)
-                    _auditResults.value = emptyList()
+                    _error.update { sceneResult.errorMessage }
+                    _auditResults.update { emptyList() }
                 } else {
-                    // 3. Compare AI results with DB
-                    val aiLabels = sceneResult.objects.map { it.label.lowercase() }
+                    // 3. Compare AI results with DB using normalized matching
+                    val aiLabels = sceneResult.objects.map { it.label.lowercase().trim() }
                     
                     val results = mutableListOf<AuditItem>()
                     
                     // Check for MATCHED and MISSING
                     dbItems.forEach { item ->
-                        val nameLower = item.name.lowercase()
-                        val matched = aiLabels.any { it.contains(nameLower) || nameLower.contains(it) }
+                        val nameLower = item.name.lowercase().trim()
+                        val matched = aiLabels.any { aiLabel ->
+                            aiLabel == nameLower || aiLabel.contains(nameLower) || nameLower.contains(aiLabel)
+                        }
                         
                         if (matched) {
                             results.add(AuditItem(item.id, item.name, AuditStatus.MATCHED, item.photoUri))
@@ -83,24 +81,31 @@ class SentinelViewModel @Inject constructor(
                     }
                     
                     // Check for NEW (found by AI but NOT in DB for this room)
-                    val dbItemNames = dbItems.map { it.name.lowercase() }
+                    val dbItemNames = dbItems.map { it.name.lowercase().trim() }
                     sceneResult.objects.forEach { obj ->
                         if (!obj.isContainer) {
-                            val labelLower = obj.label.lowercase()
-                            val existsInDb = dbItemNames.any { it.contains(labelLower) || labelLower.contains(it) }
+                            val labelLower = obj.label.lowercase().trim()
+                            val existsInDb = dbItemNames.any { dbName ->
+                                dbName == labelLower || dbName.contains(labelLower) || labelLower.contains(dbName)
+                            }
                             if (!existsInDb) {
                                 results.add(AuditItem("new_${obj.label}", obj.label, AuditStatus.NEW, null))
                             }
                         }
                     }
                     
-                    _auditResults.value = results.sortedBy { it.status }
+                    _auditResults.update { results.sortedBy { it.status } }
                 }
             } catch (e: Exception) {
-                _auditResults.value = emptyList()
+                _error.update { e.localizedMessage ?: "Unknown audit error" }
+                _auditResults.update { emptyList() }
             } finally {
-                _isLoading.value = false
+                _isLoading.update { false }
             }
         }
+    }
+    
+    fun clearError() {
+        _error.update { null }
     }
 }

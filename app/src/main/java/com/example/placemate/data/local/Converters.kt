@@ -12,7 +12,11 @@ class Converters {
 
     @TypeConverter
     fun toItemStatus(value: String): ItemStatus {
-        return ItemStatus.valueOf(value)
+        return try {
+            ItemStatus.valueOf(value)
+        } catch (e: Exception) {
+            ItemStatus.UNKNOWN
+        }
     }
 
     @TypeConverter
@@ -22,6 +26,10 @@ class Converters {
 
     @TypeConverter
     fun toLocationType(value: String): LocationType {
-        return LocationType.valueOf(value)
+        return try {
+            LocationType.valueOf(value)
+        } catch (e: Exception) {
+            LocationType.STORAGE // Fallback default
+        }
     }
 }

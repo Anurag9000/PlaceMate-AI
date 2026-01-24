@@ -26,9 +26,13 @@ class PlaceMateApp : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
-        // Run seeding in global scope for simplicity in MVP
-        MainScope().launch {
-            seedDataInitializer.seedIfNeeded()
+        // Run seeding in background scope with error handling
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO + kotlinx.coroutines.SupervisorJob()).launch {
+            try {
+                seedDataInitializer.seedIfNeeded()
+            } catch (e: Exception) {
+                android.util.Log.e("PlaceMateApp", "Seeding failed", e)
+            }
         }
     }
 }

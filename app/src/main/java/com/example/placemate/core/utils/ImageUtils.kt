@@ -1,12 +1,8 @@
-package com.example.placemate.core.utils
-
-import android.content.Context
-import android.net.Uri
-import android.os.Environment
-import androidx.core.content.FileProvider
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.*
+import android.graphics.Bitmap
+import android.graphics.Rect
+import android.graphics.BitmapFactory
+import java.io.FileOutputStream
+import java.io.InputStream
 
 object ImageUtils {
     fun createImageFile(context: Context): File {
@@ -28,33 +24,52 @@ object ImageUtils {
     }
 
     fun cropAndSave(context: Context, originalUri: Uri, rect: android.graphics.Rect): Uri? {
+        var inputStream: java.io.InputStream? = null
         return try {
-            val inputStream = context.contentResolver.openInputStream(originalUri)
-            val originalBitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
-            inputStream?.close()
-
-            if (originalBitmap == null) return null
-
-            // Ensure rect is within bitmap bounds
-            val left = rect.left.coerceIn(0, originalBitmap.width)
-            val top = rect.top.coerceIn(0, originalBitmap.height)
-            val width = rect.width().coerceIn(0, originalBitmap.width - left)
-            val height = rect.height().coerceIn(0, originalBitmap.height - top)
-
-            if (width <= 0 || height <= 0) return null
-
-            val croppedBitmap = android.graphics.Bitmap.createBitmap(originalBitmap, left, top, width, height)
+            inputStream = context.contentResolver.openInputStream(originalUri) ?: return null
             
+            // Use BitmapRegionDecoder to crop without loading the full image
+            val decoder = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                android.graphics.BitmapRegionDecoder.newInstance(inputStream)
+            } else {
+                @Suppress("DEPRECATION")
+                android.graphics.BitmapRegionDecoder.newInstance(inputStream, false)
+            }
+
+            val width = decoder?.width ?: 0
+            val height = decoder?.height ?: 0
+            
+            if (decoder == null || width == 0 || height == 0) return null
+
+            // Ensure rect is valid
+            val safeRect = android.graphics.Rect(
+                rect.left.coerceIn(0, width),
+                rect.top.coerceIn(0, height),
+                rect.right.coerceIn(0, width),
+                rect.bottom.coerceIn(0, height)
+            )
+
+            if (safeRect.width() <= 0 || safeRect.height() <= 0) return null
+
+            val options = BitmapFactory.Options()
+            val croppedBitmap = decoder.decodeRegion(safeRect, options)
+            decoder.recycle()
+
             val croppedFile = createImageFile(context)
-            val out = java.io.FileOutputStream(croppedFile)
-            croppedBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, out)
+            val out = FileOutputStream(croppedFile)
+            croppedBitmap?.let {
+                it.compress(Bitmap.CompressFormat.JPEG, 90, out)
+                it.recycle() // Recycle after compress
+            }
             out.flush()
             out.close()
 
             Uri.fromFile(croppedFile)
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e("ImageUtils", "Crop failed", e)
             null
+        } finally {
+            try { inputStream?.close() } catch (e: Exception) {}
         }
     }
 }

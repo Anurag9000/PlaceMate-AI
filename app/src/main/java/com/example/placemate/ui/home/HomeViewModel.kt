@@ -18,19 +18,19 @@ class HomeViewModel @Inject constructor(
     private val configManager: ConfigManager
 ) : ViewModel() {
 
-    val aiEngineStatus: String = if (configManager.isGeminiEnabled() && !configManager.getGeminiApiKey().isNullOrEmpty()) "Gemini 1.5 Flash" else "Basic (ML Kit)"
+    val aiEngineStatus: StateFlow<String> = configManager.geminiEnabledFlow
+        .map { enabled -> if (enabled) "Gemini 1.5 Flash" else "Basic (ML Kit)" }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Basic (ML Kit)")
 
-    val totalItemsCount: StateFlow<Int> = repository.getAllItems()
-        .map { it.size }
+    val totalItemsCount: StateFlow<Int> = repository.getItemCount()
         .stateIn(viewModelScope, SharingStarted.Lazily, 0)
 
-    val takenItemsCount: StateFlow<Int> = repository.getAllItems()
-        .map { it.count { item -> item.status == com.example.placemate.data.local.entities.ItemStatus.TAKEN } }
+    val takenItemsCount: StateFlow<Int> = repository.getTakenItemCount()
         .stateIn(viewModelScope, SharingStarted.Lazily, 0)
 
-    val recentItems: StateFlow<List<ExplorerItem>> = repository.getAllItems()
+    val recentItems: StateFlow<List<ExplorerItem>> = repository.getRecentItems()
         .map { entities -> 
-            entities.take(5).map { ExplorerItem.File(it) }
+            entities.map { ExplorerItem.File(it) }
         }
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 }

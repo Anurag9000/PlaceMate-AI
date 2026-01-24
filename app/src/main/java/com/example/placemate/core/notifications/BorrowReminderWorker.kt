@@ -52,6 +52,15 @@ class BorrowReminderWorker @AssistedInject constructor(
             .setAutoCancel(true)
             .build()
 
+        if (androidx.core.app.ActivityCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.POST_NOTIFICATIONS
+            ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            // Permission not granted, cannot show notification
+            return
+        }
+
         notificationManager.notify(itemName.hashCode(), notification)
     }
 }

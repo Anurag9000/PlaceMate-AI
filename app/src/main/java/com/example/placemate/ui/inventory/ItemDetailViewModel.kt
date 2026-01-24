@@ -1,87 +1,60 @@
-package com.example.placemate.ui.inventory
-
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.example.placemate.core.notifications.ReminderManager
-import com.example.placemate.data.local.entities.ItemEntity
-import com.example.placemate.data.local.entities.ItemStatus
-import com.example.placemate.data.local.entities.BorrowEventEntity
-import com.example.placemate.data.repository.InventoryRepository
-import com.example.placemate.data.repository.TrackingRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
+import androidx.lifecycle.SavedStateHandle
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import javax.inject.Inject
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class ItemDetailViewModel @Inject constructor(
     private val inventoryRepository: InventoryRepository,
     private val trackingRepository: TrackingRepository,
-    private val reminderManager: ReminderManager
+    private val reminderManager: ReminderManager,
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val _item = MutableStateFlow<ItemEntity?>(null)
-    val item: StateFlow<ItemEntity?> = _item
+    private val itemId = savedStateHandle.getStateFlow<String?>("itemId", null)
 
-    private val _locationPath = MutableStateFlow<String?>(null)
-    val locationPath: StateFlow<String?> = _locationPath
+    val item: StateFlow<ItemEntity?> = itemId.flatMapLatest { id ->
+        if (id == null) flowOf(null)
+        else inventoryRepository.observeItemById(id)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    fun loadItem(itemId: String) {
-        viewModelScope.launch {
-            val itemEntity = inventoryRepository.getItemById(itemId)
-            _item.value = itemEntity
-            
-            itemEntity?.let {
-                val location = inventoryRepository.getLocationForItem(it.id)
-                _locationPath.value = location?.let { loc -> inventoryRepository.getLocationPath(loc.id) }
-            }
+    val locationPath: StateFlow<String?> = item.flatMapLatest { item ->
+        if (item == null) flowOf(null)
+        else kotlinx.coroutines.flow.flow {
+            emit(inventoryRepository.getLocationPathForItem(item.id))
         }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    fun loadItem(id: String) {
+        savedStateHandle["itemId"] = id
     }
 
     fun markAsTaken(borrower: String, dueDate: Long?) {
-        val currentItem = _item.value ?: return
+        val currentItem = item.value ?: return
         viewModelScope.launch {
-            val updatedItem = currentItem.copy(status = ItemStatus.TAKEN, updatedAt = System.currentTimeMillis())
-            inventoryRepository.saveItem(updatedItem)
-            
-            val event = BorrowEventEntity(
-                itemId = currentItem.id,
-                takenBy = borrower,
-                dueAt = dueDate
-            )
-            trackingRepository.saveBorrowEvent(event)
-            reminderManager.scheduleReminder(currentItem.id)
-            _item.value = updatedItem
+            inventoryRepository.markItemAsTaken(currentItem, borrower, dueDate)
         }
     }
 
     fun markAsReturned() {
-        val currentItem = _item.value ?: return
+        val currentItem = item.value ?: return
         viewModelScope.launch {
-            val updatedItem = currentItem.copy(status = ItemStatus.PRESENT, updatedAt = System.currentTimeMillis())
-            inventoryRepository.saveItem(updatedItem)
-            
-            val activeEvent = trackingRepository.getActiveBorrowEventForItem(currentItem.id)
-            activeEvent?.let {
-                val updatedEvent = it.copy(returnedAt = System.currentTimeMillis())
-                trackingRepository.updateBorrowEvent(updatedEvent)
-            }
-            reminderManager.cancelReminder(currentItem.id)
-            _item.value = updatedItem
+            inventoryRepository.markItemAsReturned(currentItem)
         }
     }
 
     fun deleteItem() {
-        val currentItem = _item.value ?: return
+        val currentItem = item.value ?: return
         viewModelScope.launch {
             inventoryRepository.deleteItem(currentItem)
-            _item.value = null
         }
     }
 
     fun updateItemDetails(name: String, category: String, description: String?, photoUri: String?) {
-        val currentItem = _item.value ?: return
+        val currentItem = item.value ?: return
         viewModelScope.launch {
             val updatedItem = currentItem.copy(
                 name = name,
@@ -91,7 +64,6 @@ class ItemDetailViewModel @Inject constructor(
                 updatedAt = System.currentTimeMillis()
             )
             inventoryRepository.saveItem(updatedItem)
-            _item.value = updatedItem
         }
     }
 }

@@ -1,33 +1,24 @@
-package com.example.placemate.ui.inventory
-
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.example.placemate.data.local.entities.ItemEntity
+import com.example.placemate.core.input.ItemRecognitionService
+import com.example.placemate.core.utils.CategoryManager
 import com.example.placemate.data.repository.InventoryRepository
-import kotlinx.coroutines.flow.combine
-import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.transform
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.first
-import javax.inject.Inject
-import com.example.placemate.core.input.SceneRecognitionResult
-import com.example.placemate.data.local.entities.LocationType
-import com.example.placemate.data.local.entities.LocationEntity
-import com.example.placemate.data.local.entities.ItemPlacementEntity
+import com.example.placemate.core.utils.SynonymManager
+import com.example.placemate.core.utils.ConfigManager
+import com.example.placemate.core.input.RecognizedObject
+import android.graphics.Rect
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class InventoryViewModel @Inject constructor(
-    private val repository: com.example.placemate.data.repository.InventoryRepository,
-    private val categoryManager: com.example.placemate.core.utils.CategoryManager
+    private val repository: InventoryRepository,
+    private val categoryManager: CategoryManager,
+    private val recognitionService: ItemRecognitionService,
+    private val synonymManager: SynonymManager,
+    private val configManager: ConfigManager,
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
+
+    private val KEY_SEARCH_QUERY = "search_query"
+    private val KEY_CURRENT_LOCATION_ID = "current_location_id"
 
 
     fun syncScene(context: android.content.Context, result: SceneRecognitionResult, imageUri: android.net.Uri) {
@@ -47,18 +38,41 @@ class InventoryViewModel @Inject constructor(
             
             val roomLabel = roomObj?.label ?: "Scanned Room"
             val roomPhotoUri = roomObj?.boundingBox?.let { 
-                com.example.placemate.core.utils.ImageUtils.cropAndSave(context, imageUri, it)
+                ImageUtils.cropAndSave(context, imageUri, it)
             }
             
-            val roomEntity = currentLocations.find { it.name.equals(roomLabel, true) && it.parentId == null }
-            
+            // 1. Resolve Location Entity (Text + Visual)
+            var roomEntity = currentLocations.find { loc -> 
+                val locName = loc.name.lowercase()
+                val label = roomLabel.lowercase()
+                locName == label || (locName.length > 3 && label.length > 3 && (locName.contains(label) || label.contains(locName)))
+            }
+
+            // Visual Verification Step
+            if (roomEntity == null) {
+                // If no text match found, try Visual Match against all similar types
+                val candidates = currentLocations
+                    .filter { it.type == LocationType.ROOM || it.type == LocationType.STORAGE }
+                    .filter { it.photoUri != null }
+                    .map { com.example.placemate.core.input.VisualCandidate(it.id, it.name, android.net.Uri.parse(it.photoUri)) }
+                
+                if (candidates.isNotEmpty()) {
+                    // Try to find a visual match
+                    val matchedId = recognitionService.findVisualMatch(imageUri, candidates)
+                    if (matchedId != null) {
+                        roomEntity = currentLocations.find { it.id == matchedId }
+                    }
+                }
+            }
+
             val finalRoomEntity = if (roomEntity != null) {
-                // Refresh photo if it's an existing room
+                // Refresh photo if it's an existing room/shelf
                 if (roomPhotoUri != null) {
                     repository.updateLocation(roomEntity.copy(photoUri = roomPhotoUri.toString()))
                 }
                 roomEntity
             } else {
+                // If not found, assume it is a new ROOT room for now. 
                 repository.addLocationSync(roomLabel, LocationType.ROOM, null, roomPhotoUri?.toString())
             }
             
@@ -68,54 +82,47 @@ class InventoryViewModel @Inject constructor(
             // Sort by confidence or label density if needed, but here we process all containers
             val containerObjects = objects.filter { it.isContainer && it.label != roomLabel }
             
-            // We might need multiple passes if there's deep nesting (e.g. Box in a Shelf)
-            // For simplicity, we'll do up to 3 passes to resolve parents
-            // We handle deep nesting (e.g. Pin -> Box -> Drawer -> Desk -> Room)
-            // We run multiple passes to ensure parents are created before their children link to them.
-            // 10 passes should cover any realistic physical storage depth.
-            repeat(10) {
-                containerObjects.forEach { cont ->
-                    // ... same logic ...
-                    if (!locationCache.containsKey(cont.label)) {
-                        val parentEntity = cont.parentLabel?.let { pLabel ->
-                            locationCache.entries.find { it.key.equals(pLabel, true) }?.value
-                        } ?: roomEntity // Default to room if parent not yet found (will be updated in next pass? No, insert is final here)
-                        
-                        // Wait, if we fallback to roomEnity immediately, we break the chain if the parent IS in the list but not yet processed.
-                        // We should only create if parent IS found or if parentLabel is null.
-                        
-                        val resolvedParent = cont.parentLabel?.let { pLabel ->
-                             locationCache.entries.find { it.key.equals(pLabel, true) }?.value
-                        }
-                        
-                        // If detected parent is strictly missing from cache but exists in our objects list, wait.
-                        val parentIsKnownContainer = containerObjects.any { it.label.equals(cont.parentLabel, true) }
-                        
-                        if (resolvedParent != null || !parentIsKnownContainer || cont.parentLabel == null) {
-                             val finalParent = resolvedParent ?: roomEntity
-                             
-                             val contPhotoUri = cont.boundingBox?.let { 
-                                 com.example.placemate.core.utils.ImageUtils.cropAndSave(context, imageUri, it)
-                             }
+            // We build nested hierarchy by resolving parents first.
+            // Sorting containers by their relationships would be ideal, but for MVP, 
+            // a multi-pass approach is robust against detection order.
+            val containersToProcess = containerObjects.toMutableList()
+            var passes = 0
+            while (containersToProcess.isNotEmpty() && passes < 5) {
+                val iterator = containersToProcess.iterator()
+                while (iterator.hasNext()) {
+                    val cont = iterator.next()
+                    val parentEntity = cont.parentLabel?.let { pLabel ->
+                        locationCache.entries.find { it.key.equals(pLabel, true) }?.value
+                    } ?: if (cont.parentLabel == null) roomEntity else null
 
-                             val existingEntity = currentLocations.find { 
-                                it.name.equals(cont.label, true) && it.parentId == finalParent!!.id 
-                            }
-                            
-                            val entity = if (existingEntity != null) {
-                                // Refresh photo if it's an existing container
-                                if (contPhotoUri != null) {
-                                    repository.updateLocation(existingEntity.copy(photoUri = contPhotoUri.toString()))
-                                }
-                                existingEntity
-                            } else {
-                                repository.addLocationSync(cont.label, LocationType.STORAGE, finalParent!!.id, contPhotoUri?.toString())
-                            }
-                             
-                            locationCache[cont.label] = entity
+                    if (parentEntity != null) {
+                         val contPhotoUri = cont.boundingBox?.let { 
+                             ImageUtils.cropAndSave(context, imageUri, it)
+                         }
+
+                         val existingEntity = currentLocations.find { 
+                            it.name.equals(cont.label, true) && it.parentId == parentEntity.id 
                         }
+                        
+                         val entity = if (existingEntity != null) {
+                            if (contPhotoUri != null) {
+                                repository.updateLocation(existingEntity.copy(photoUri = contPhotoUri.toString()))
+                            }
+                            existingEntity
+                        } else {
+                            repository.addLocationSync(cont.label, LocationType.STORAGE, parentEntity.id, contPhotoUri?.toString())
+                        }
+                         
+                        locationCache[cont.label] = entity
+                        iterator.remove()
                     }
                 }
+                passes++
+            }
+            // Any remaining containers that couldn't find a parent get attached to root room
+            containersToProcess.forEach { cont ->
+                val entity = repository.addLocationSync(cont.label, LocationType.STORAGE, roomEntity.id)
+                locationCache[cont.label] = entity
             }
  
             val existingItems = repository.getAllItemsSync().map { it.name }.toMutableSet()
@@ -133,10 +140,16 @@ class InventoryViewModel @Inject constructor(
                     containerObjects.filter { contObj ->
                         contObj.boundingBox?.contains(centerX, centerY) == true
                     }.minByOrNull { contObj -> 
-                        val r = contObj.boundingBox!!
+                        val r = contObj.boundingBox ?: android.graphics.Rect()
                         r.width() * r.height()
                     }?.let { locationCache[it.label] }
-                } ?: finalRoomEntity!!
+                } ?: finalRoomEntity ?: roomEntity // Fallback to roomEntity if finalRoomEntity is temporarily null?
+                // actually finalRoomEntity is defined above and *might* be null if addLocationSync failed or logic gap.
+                // But wait, finalRoomEntity is non-nullable in logic flow?
+                // logic: val finalRoomEntity = if (roomEntity != null)... else ... returns LocationEntity (not nullable).
+                // Ah, the original code had `finalRoomEntity!!` which implies the compiler thought it was nullable or I am forcing it.
+                // Let's assume it IS nullable in some path I didn't see. Using ?: return@forEach is safer.
+                ?: return@forEach
 
                 val croppedUri = item.boundingBox?.let { 
                      com.example.placemate.core.utils.ImageUtils.cropAndSave(context, imageUri, it)
@@ -187,13 +200,14 @@ class InventoryViewModel @Inject constructor(
             }
         }.stateIn(viewModelScope, SharingStarted.Lazily, "Home")
 
-    val explorerItems: StateFlow<List<ExplorerItem>> = kotlinx.coroutines.flow.combine(
+    val explorerItems: StateFlow<List<ExplorerItem>> = combine(
         _currentLocationId,
         _searchQuery,
         _refreshTrigger
     ) { locId, query, _ ->
         if (query.isNotEmpty()) {
             val items = repository.searchItems(query).first()
+            
             items.map { item ->
                 val path = repository.getLocationPathForItem(item.id)
                 ExplorerItem.File(item, path)
@@ -267,7 +281,7 @@ class InventoryViewModel @Inject constructor(
 
     suspend fun getLocationContextHint(): String {
         val locations = repository.getAllLocationsSync() ?: return ""
-        // Top level rooms only as hints for now
-        return locations.filter { it.parentId == null }.joinToString(", ") { it.name }
+        // Return all known location names to help AI match existing shelves/containers
+        return locations.distinctBy { it.name }.joinToString(", ") { it.name }
     }
 }

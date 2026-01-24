@@ -38,8 +38,8 @@ object CoreModule {
                 }
             }
 
-            override suspend fun recognizeItem(imageUri: android.net.Uri): com.example.placemate.core.input.RecognitionResult {
-                return getActiveService().recognizeItem(imageUri)
+            override suspend fun recognizeItem(imageUri: android.net.Uri, contextHint: String?): com.example.placemate.core.input.RecognitionResult {
+                return getActiveService().recognizeItem(imageUri, contextHint)
             }
 
             override suspend fun recognizeScene(imageUri: android.net.Uri, contextHint: String?): com.example.placemate.core.input.SceneRecognitionResult {

@@ -1,20 +1,7 @@
-package com.example.placemate.ui.inventory
-
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
-import androidx.navigation.fragment.findNavController
-import com.example.placemate.R
-import com.example.placemate.data.local.entities.ItemStatus
-import com.example.placemate.databinding.FragmentItemDetailBinding
-import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch
+import android.net.Uri
+import java.io.File
+import com.example.placemate.core.utils.ImageUtils
+import androidx.activity.result.contract.ActivityResultContracts
 
 @AndroidEntryPoint
 class ItemDetailFragment : Fragment() {
@@ -33,15 +20,14 @@ class ItemDetailFragment : Fragment() {
         return binding.root
     }
 
-    private var photoFile: java.io.File? = null
+    private var photoFile: File? = null
     private val takePictureLauncher = registerForActivityResult(
-        androidx.activity.result.contract.ActivityResultContracts.TakePicture()
+        ActivityResultContracts.TakePicture()
     ) { success ->
         if (success) {
             photoFile?.let { file ->
-                val uri = android.net.Uri.fromFile(file)
+                val uri = Uri.fromFile(file)
                 binding.itemDetailImage.setImageURI(uri)
-                // We'll save the URI when they click "Save"
                 tempPhotoUri = uri.toString()
             }
         }
@@ -84,8 +70,8 @@ class ItemDetailFragment : Fragment() {
         }
 
         binding.fabEditImage.setOnClickListener {
-            photoFile = com.example.placemate.core.utils.ImageUtils.createImageFile(requireContext())
-            val uri = com.example.placemate.core.utils.ImageUtils.getContentUri(requireContext(), photoFile!!)
+            photoFile = ImageUtils.createImageFile(requireContext())
+            val uri = ImageUtils.getContentUri(requireContext(), photoFile!!)
             takePictureLauncher.launch(uri)
         }
 
@@ -112,10 +98,10 @@ class ItemDetailFragment : Fragment() {
 
                             if (it.status == ItemStatus.PRESENT) {
                                 binding.btnAction.text = getString(R.string.btn_mark_taken)
-                                binding.textItemStatus.setBackgroundColor(android.graphics.Color.parseColor("#4CAF50"))
+                                binding.textItemStatus.setBackgroundResource(R.color.success)
                             } else {
                                 binding.btnAction.text = getString(R.string.btn_mark_returned)
-                                binding.textItemStatus.setBackgroundColor(android.graphics.Color.parseColor("#F44336"))
+                                binding.textItemStatus.setBackgroundResource(R.color.error)
                             }
                         }
                     }

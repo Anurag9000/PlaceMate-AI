@@ -1,23 +1,30 @@
-package com.example.placemate.ui.taken
-
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.example.placemate.data.local.entities.ItemEntity
-import com.example.placemate.data.local.entities.ItemStatus
-import com.example.placemate.data.repository.InventoryRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
-import javax.inject.Inject
+import com.example.placemate.ui.inventory.ExplorerItem
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.first
 
 @HiltViewModel
 class TakenItemsViewModel @Inject constructor(
     private val repository: InventoryRepository
 ) : ViewModel() {
 
-    val takenItems: StateFlow<List<ItemEntity>> = repository.getAllItems()
-        .map { items -> items.filter { it.status == ItemStatus.TAKEN } }
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    private val _searchQuery = MutableStateFlow("")
+    fun updateSearchQuery(query: String) { _searchQuery.value = query }
+
+    val takenItems: StateFlow<List<ExplorerItem>> = combine(
+        repository.getTakenItems(),
+        _searchQuery
+    ) { items, query ->
+        val filtered = if (query.isBlank()) items
+        else items.filter { it.name.contains(query, ignoreCase = true) }
+        
+        filtered.map { item ->
+            // In a real app with many items, we'd use a more optimized join query.
+            // For MVP, mapping with repo helper is sufficient.
+            val path = repository.getLocationPathForItem(item.id)
+            ExplorerItem.File(item, path)
+        }
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 }

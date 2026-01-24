@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import com.example.placemate.data.local.dao.LocationWithCount
 import java.util.UUID
 import javax.inject.Inject
 
@@ -19,7 +20,7 @@ class LocationsViewModel @Inject constructor(
     private val repository: InventoryRepository
 ) : ViewModel() {
 
-    val locations: StateFlow<List<LocationEntity>> = repository.getAllLocations()
+    val locations: StateFlow<List<LocationWithCount>> = repository.getAllLocationsWithCounts()
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     fun addLocation(name: String, type: LocationType, parentId: String?) {
@@ -47,7 +48,7 @@ class LocationsViewModel @Inject constructor(
     }
 
     fun checkLocationExists(name: String): LocationEntity? {
-        return locations.value.find { it.name.equals(name, ignoreCase = true) }
+        return locations.value.find { it.location.name.equals(name, ignoreCase = true) }?.location
     }
 
     suspend fun getItemsForLocation(locationId: String): List<ItemEntity> {

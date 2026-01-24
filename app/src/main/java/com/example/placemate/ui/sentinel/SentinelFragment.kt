@@ -1,16 +1,11 @@
-package com.example.placemate.ui.sentinel
-
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.ArrayAdapter
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.placemate.R
 import com.example.placemate.databinding.FragmentSentinelBinding
 import com.example.placemate.core.utils.ImageUtils
 import dagger.hilt.android.AndroidEntryPoint
@@ -32,8 +27,9 @@ class SentinelFragment : Fragment() {
     private val takePictureLauncher = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.TakePicture()
     ) { success ->
-        if (success && photoFile != null && selectedLocationId != null) {
-            viewModel.performAudit(android.net.Uri.fromFile(photoFile), selectedLocationId!!)
+        val locId = selectedLocationId
+        if (success && photoFile != null && locId != null) {
+            viewModel.performAudit(android.net.Uri.fromFile(photoFile), locId)
         }
     }
 
@@ -63,7 +59,7 @@ class SentinelFragment : Fragment() {
     private fun setupListeners() {
         binding.btnScanAudit.setOnClickListener {
             if (selectedLocationId == null) {
-                android.widget.Toast.makeText(requireContext(), "Please select a room first", android.widget.Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), getString(R.string.audit_error_select_room), Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             launchCamera()
@@ -101,6 +97,15 @@ class SentinelFragment : Fragment() {
                     viewModel.auditResults.collect { results ->
                         auditAdapter.submitList(results)
                         binding.tvEmptyState.visibility = if (results.isEmpty()) View.VISIBLE else View.GONE
+                    }
+                }
+
+                launch {
+                    viewModel.error.collect { error ->
+                        error?.let {
+                            Toast.makeText(requireContext(), it, Toast.LENGTH_LONG).show()
+                            viewModel.clearError()
+                        }
                     }
                 }
 

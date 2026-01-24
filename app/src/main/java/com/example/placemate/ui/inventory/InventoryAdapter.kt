@@ -48,7 +48,7 @@ class InventoryAdapter(
     inner class FolderViewHolder(private val binding: ItemInventoryBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(item: ExplorerItem.Folder) {
             binding.itemName.text = item.location.name
-            binding.itemCategory.text = "Contains items..." // Placeholder count
+            binding.itemCategory.text = if (item.itemCount > 0) "${item.itemCount} items" else "Empty Folder"
             binding.itemStatus.text = "FOLDER"
             if (!item.location.photoUri.isNullOrEmpty()) {
                 binding.itemImage.setImageURI(android.net.Uri.parse(item.location.photoUri))
@@ -73,8 +73,31 @@ class InventoryAdapter(
             binding.itemName.text = entity.name
             binding.itemCategory.text = item.locationPath ?: entity.category
             binding.itemStatus.text = entity.status.name
-             if (!entity.photoUri.isNullOrEmpty()) {
-                binding.itemImage.setImageURI(android.net.Uri.parse(entity.photoUri))
+            
+            if (!entity.photoUri.isNullOrEmpty()) {
+                // Async image loading
+                // Use a single-shot load or better yet, recommend Coil/Glide.
+                // For now, using a safer approach tied to the item tag check.
+                binding.itemImage.setImageDrawable(null) // Clear previous
+                kotlinx.coroutines.MainScope().launch {
+                    val bitmap = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        try {
+                            val uri = android.net.Uri.parse(entity.photoUri)
+                            binding.root.context.contentResolver.openInputStream(uri).use { 
+                                android.graphics.BitmapFactory.decodeStream(it)
+                            }
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+                    if (binding.itemImage.tag == entity.photoUri) {
+                        if (bitmap != null) {
+                            binding.itemImage.setImageBitmap(bitmap)
+                        } else {
+                            binding.itemImage.setImageResource(android.R.drawable.ic_menu_gallery)
+                        }
+                    }
+                }
             } else {
                 binding.itemImage.setImageResource(android.R.drawable.ic_menu_gallery)
             }

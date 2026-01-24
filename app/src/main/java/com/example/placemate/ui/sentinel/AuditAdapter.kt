@@ -23,16 +23,17 @@ class AuditAdapter : ListAdapter<AuditItem, AuditAdapter.AuditViewHolder>(AuditD
         fun bind(item: AuditItem) {
             binding.itemName.text = item.name
             
+            val context = binding.root.context
             val statusText = when (item.status) {
-                AuditStatus.MATCHED -> "MATCHED"
-                AuditStatus.MISSING -> "MISSING"
-                AuditStatus.NEW -> "NEW/MOVED"
+                AuditStatus.MATCHED -> context.getString(R.string.audit_status_matched)
+                AuditStatus.MISSING -> context.getString(R.string.audit_status_missing)
+                AuditStatus.NEW -> context.getString(R.string.audit_status_new)
             }
             
             val statusColor = when (item.status) {
-                AuditStatus.MATCHED -> binding.root.context.getColor(android.R.color.holo_green_dark)
-                AuditStatus.MISSING -> binding.root.context.getColor(android.R.color.holo_red_dark)
-                AuditStatus.NEW -> binding.root.context.getColor(android.R.color.holo_orange_dark)
+                AuditStatus.MATCHED -> context.getColor(R.color.success)
+                AuditStatus.MISSING -> context.getColor(R.color.error)
+                AuditStatus.NEW -> context.getColor(R.color.warning)
             }
             
             binding.itemStatus.text = statusText

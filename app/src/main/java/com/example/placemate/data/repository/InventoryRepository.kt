@@ -9,29 +9,55 @@ import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
 
+import com.example.placemate.data.local.entities.ItemPlacementEntity
+import com.example.placemate.data.local.entities.ItemStatus
+import com.example.placemate.data.local.entities.BorrowEventEntity
+import com.example.placemate.ui.inventory.ExplorerItem
+
 @Singleton
 class InventoryRepository @Inject constructor(
     private val inventoryDao: InventoryDao,
-    private val locationDao: LocationDao
+    private val locationDao: LocationDao,
+    private val trackingDao: com.example.placemate.data.local.dao.TrackingDao,
+    private val reminderManager: com.example.placemate.core.notifications.ReminderManager,
+    private val database: com.example.placemate.data.local.AppDatabase
 ) {
     fun getAllItems(): Flow<List<ItemEntity>> = inventoryDao.getAllItems()
+
+    fun getItemCount(): Flow<Int> = inventoryDao.getItemCountFlow()
+    
+    fun getTakenItemCount(): Flow<Int> = inventoryDao.getTakenItemCountFlow()
+
+    fun getTakenItems(): Flow<List<ItemEntity>> = inventoryDao.getTakenItemsFlow()
+
+    fun getRecentItems(): Flow<List<ItemEntity>> = inventoryDao.getRecentItemsFlow()
 
     fun searchItems(query: String): Flow<List<ItemEntity>> = inventoryDao.searchItems(query)
 
     suspend fun getItemById(id: String): ItemEntity? = inventoryDao.getItemById(id)
 
-    suspend fun getAllItemsSync(): List<ItemEntity> = inventoryDao.getAllItemsSync()
+    fun observeItemById(id: String): Flow<ItemEntity?> = kotlinx.coroutines.flow.flow {
+        inventoryDao.getAllItems().collect { list ->
+            emit(list.find { it.id == id })
+        }
+    }
 
     suspend fun saveItem(item: ItemEntity, locationId: String? = null) {
-        inventoryDao.insertItem(item)
-        locationId?.let {
-            inventoryDao.insertPlacement(com.example.placemate.data.local.entities.ItemPlacementEntity(item.id, it))
+        androidx.room.withTransaction(database) {
+            inventoryDao.insertItem(item)
+            locationId?.let {
+                // Enforce single-location rule: Clear previous placements
+                inventoryDao.deletePlacementsForItem(item.id)
+                inventoryDao.insertPlacement(ItemPlacementEntity(item.id, it))
+            }
         }
     }
 
     suspend fun deleteItem(item: ItemEntity) = inventoryDao.deleteItem(item)
 
     fun getAllLocations(): Flow<List<LocationEntity>> = locationDao.getAllLocations()
+
+    fun getAllLocationsWithCounts(): Flow<List<LocationWithCount>> = inventoryDao.getAllLocationsWithCountsFlow()
 
     suspend fun saveLocation(location: LocationEntity) = locationDao.insertLocation(location)
 
@@ -47,9 +73,16 @@ class InventoryRepository @Inject constructor(
     suspend fun getLocationPath(locationId: String): String {
         val path = mutableListOf<String>()
         var current: LocationEntity? = locationDao.getLocationById(locationId)
-        while (current != null) {
+        var depth = 0
+        val visited = mutableSetOf<String>()
+        
+        while (current != null && depth < 50) {
+            if (visited.contains(current.id)) break // Cycle detected
+            visited.add(current.id)
+            
             path.add(0, current.name)
             current = current.parentId?.let { locationDao.getLocationById(it) }
+            depth++
         }
         return path.joinToString(" > ")
     }
@@ -58,24 +91,25 @@ class InventoryRepository @Inject constructor(
     }
 
     suspend fun nukeData() {
-        inventoryDao.deleteAllPlacements()
-        inventoryDao.deleteAllItems()
-        locationDao.deleteAllLocations()
+        androidx.room.withTransaction(database) {
+            inventoryDao.deleteAllPlacements()
+            inventoryDao.deleteAllItems()
+            locationDao.deleteAllLocations()
+        }
     }
 
     suspend fun getAllLocationsSync(): List<LocationEntity>? {
         return locationDao.getAllLocationsSync()
     }
 
-    suspend fun getExplorerContent(parentId: String?): List<com.example.placemate.ui.inventory.ExplorerItem> {
-        val allLocations = locationDao.getAllLocationsSync()
-        val folders = allLocations.filter { it.parentId == parentId }.map { loc ->
-            com.example.placemate.ui.inventory.ExplorerItem.Folder(loc, 0)
+    suspend fun getExplorerContent(parentId: String?): List<ExplorerItem> {
+        val folders = inventoryDao.getLocationsWithItemCounts(parentId).map { locWithCount ->
+            ExplorerItem.Folder(locWithCount.location, locWithCount.itemCount)
         }
 
         val files = if (parentId != null) {
             inventoryDao.getItemsForLocation(parentId).map { item ->
-                com.example.placemate.ui.inventory.ExplorerItem.File(item)
+                ExplorerItem.File(item)
             }
         } else {
             emptyList()
@@ -88,5 +122,40 @@ class InventoryRepository @Inject constructor(
         val location = LocationEntity(name = name, type = type, parentId = parentId, photoUri = photoUri)
         locationDao.insertLocation(location)
         return location
+    }
+
+    suspend fun markItemAsTaken(item: ItemEntity, borrower: String, dueDate: Long?) {
+        androidx.room.withTransaction(database) {
+            val updatedItem = item.copy(
+                status = ItemStatus.TAKEN,
+                updatedAt = System.currentTimeMillis()
+            )
+            inventoryDao.insertItem(updatedItem)
+            
+            val event = BorrowEventEntity(
+                itemId = item.id,
+                takenBy = borrower,
+                dueAt = dueDate
+            )
+            trackingDao.insertBorrowEvent(event)
+            reminderManager.scheduleReminder(item.id)
+        }
+    }
+
+    suspend fun markItemAsReturned(item: ItemEntity) {
+        androidx.room.withTransaction(database) {
+            val updatedItem = item.copy(
+                status = com.example.placemate.data.local.entities.ItemStatus.PRESENT,
+                updatedAt = System.currentTimeMillis()
+            )
+            inventoryDao.insertItem(updatedItem)
+            
+            val activeEvent = trackingDao.getActiveBorrowEvent(item.id)
+            activeEvent?.let {
+                val updatedEvent = it.copy(returnedAt = System.currentTimeMillis())
+                trackingDao.updateBorrowEvent(updatedEvent)
+            }
+            reminderManager.cancelReminder(item.id)
+        }
     }
 }

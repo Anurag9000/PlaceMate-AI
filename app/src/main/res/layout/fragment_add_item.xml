@@ -85,7 +85,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="Location"
+            android:text="@string/label_location"
             android:textAppearance="?attr/textAppearanceOverline"
             app:layout_constraintTop_toBottomOf="@id/notes_layout" />
 
@@ -103,7 +103,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Not Set"
+                android:text="@string/placeholder_not_set"
                 android:textSize="16sp" />
 
             <Button
@@ -111,7 +111,7 @@
                 style="@style/Widget.MaterialComponents.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Edit" />
+                android:text="@string/btn_edit" />
 
         </LinearLayout>
 

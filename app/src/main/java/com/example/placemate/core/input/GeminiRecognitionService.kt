@@ -13,6 +13,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import com.example.placemate.core.utils.CategoryManager
+import com.example.placemate.core.utils.ImageUtils
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -21,7 +23,7 @@ class GeminiRecognitionService @Inject constructor(
     @ApplicationContext private val context: Context,
     private val configManager: ConfigManager,
     private val synonymManager: SynonymManager,
-    private val categoryManager: com.example.placemate.core.utils.CategoryManager
+    private val categoryManager: CategoryManager
 ) : ItemRecognitionService {
 
     private fun getModel(): GenerativeModel? {
@@ -47,14 +49,14 @@ class GeminiRecognitionService @Inject constructor(
         return capabilities.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
-    override suspend fun recognizeItem(imageUri: Uri): RecognitionResult = withContext(Dispatchers.IO) {
+    override suspend fun recognizeItem(imageUri: Uri, contextHint: String?): RecognitionResult = withContext(Dispatchers.IO) {
         if (!isOnline()) return@withContext RecognitionResult(null, null, 0f, errorMessage = "Internet connection required for Gemini AI")
         val model = getModel() ?: return@withContext RecognitionResult(null, null, 0f, errorMessage = "Gemini API Key missing or invalid")
         
         try {
             val bitmap = loadBitmap(imageUri) ?: return@withContext RecognitionResult(null, null, 0f, errorMessage = "Failed to load image")
             
-            val prompt = """
+            val basePrompt = """
                 SYSTEM: You are a high-precision object detection AI. 
                 Identify the primary object in this image.
                 - name: Highly specific name (e.g. "Mechanical Pencil", "Sony Headphones").
@@ -72,13 +74,20 @@ class GeminiRecognitionService @Inject constructor(
                 If absolutely nothing is found, still return the schema with "Unknown" values.
             """.trimIndent()
 
+            val prompt = if (!contextHint.isNullOrEmpty()) {
+                "CONTEXT: The user has previously cataloged these items/locations: $contextHint.\n" +
+                "If the object in the image looks like one of these, use that EXACT name.\n\n" +
+                basePrompt
+            } else {
+                basePrompt
+            }
+
             val response = model.generateContent(content {
                 image(bitmap)
                 text(prompt)
             })
 
             val text = response.text ?: ""
-// Removed debug log
             val jsonStr = extractJson(text)
             if (jsonStr.isEmpty()) return@withContext RecognitionResult(null, null, 0f, errorMessage = "Could not parse AI response")
 
@@ -88,7 +97,13 @@ class GeminiRecognitionService @Inject constructor(
                  return@withContext RecognitionResult(null, null, 0f, errorMessage = "AI identified this as 'Unknown'. Try a closer photo.")
             }
             
-            val normalized = synonymManager.getRepresentativeName(name)
+            val isContextMatch = contextHint != null && contextHint.contains(name, ignoreCase = true)
+            
+            val normalized = if (isContextMatch) {
+                name
+            } else {
+                synonymManager.getRepresentativeName(name)
+            }
             
             RecognitionResult(
                 suggestedName = normalized.replaceFirstChar { it.uppercase() },
@@ -121,8 +136,9 @@ class GeminiRecognitionService @Inject constructor(
 
             val basePrompt = configManager.getCustomGeminiPrompt()
             val prompt = if (!contextHint.isNullOrEmpty()) {
-                "CONTEXT: The following locations already exist in the user's domain: $contextHint. " +
-                "Try to match the current scene or its containers to these existing labels if they are visually similar.\n\n" +
+                "CONTEXT: The user has an existing inventory with these exact shelf/room names: [$contextHint].\n" +
+                "TASK: Analyze the image. If the room or any container in the image appears to match one of the stored names, YOU MUST USE THAT EXACT NAME in your response.\n" +
+                "Do NOT generate generic names (like 'Wooden Shelf') if a specific name (like 'Pantry Shelf A') from the list applies.\n\n" +
                 basePrompt
             } else {
                 basePrompt
@@ -134,7 +150,6 @@ class GeminiRecognitionService @Inject constructor(
             })
 
             val text = response.text ?: ""
-// Removed debug log
             val jsonStr = extractJson(text)
             if (jsonStr.isEmpty()) return@withContext SceneRecognitionResult(emptyList(), "AI returned invalid JSON format")
 
@@ -149,7 +164,16 @@ class GeminiRecognitionService @Inject constructor(
             for (i in 0 until jsonArray.length()) {
                 val obj = jsonArray.getJSONObject(i)
                 val label = obj.optString("label", "Unknown Target")
-                val normalized = synonymManager.getRepresentativeName(label)
+                
+                // If the raw label matches something in our context hint (user's existing items),
+                // we should PREFER the raw label and NOT normalize it (which might turn "Pantry" -> "Kitchen").
+                val isContextMatch = contextHint != null && contextHint.contains(label, ignoreCase = true)
+                
+                val finalLabel = if (isContextMatch) {
+                    label // Keep exact name found by AI which matches user DB
+                } else {
+                    synonymManager.getRepresentativeName(label) // Normalize generic terms
+                }
                 
                 val boxArray = obj.optJSONArray("box_2d")
                 val rect = if (boxArray != null && boxArray.length() == 4) {
@@ -161,8 +185,8 @@ class GeminiRecognitionService @Inject constructor(
                 } else null
 
                 recognized.add(RecognizedObject(
-                    label = normalized.replaceFirstChar { it.uppercase() },
-                    isContainer = obj.optBoolean("isContainer", categoryManager.isLabelContainer(normalized)),
+                    label = finalLabel.replaceFirstChar { it.uppercase() },
+                    isContainer = obj.optBoolean("isContainer", categoryManager.isLabelContainer(finalLabel)),
                     confidence = obj.optDouble("confidence", 0.0).toFloat(),
                     boundingBox = rect,
                     quantity = obj.optInt("quantity", 1),
@@ -182,20 +206,108 @@ class GeminiRecognitionService @Inject constructor(
         }
     }
 
+    override suspend fun findVisualMatch(targetUri: Uri, candidates: List<VisualCandidate>): String? = withContext(Dispatchers.IO) {
+        if (!isOnline()) return@withContext null
+        val model = getModel() ?: return@withContext null
+        if (candidates.isEmpty()) return@withContext null
+
+        try {
+            val targetBitmap = loadBitmap(targetUri) ?: return@withContext null
+            
+            // Limit to top 5 candidates to prevent payload issues
+            val topCandidates = candidates.take(5)
+            
+            val candidateBitmaps = topCandidates.mapNotNull { 
+                loadBitmap(it.photoUri)?.let { bmp -> it to bmp } 
+            }
+            
+            if (candidateBitmaps.isEmpty()) return@withContext null
+
+            val prompt = """
+                Comparing images to identify a specific physical object/location.
+                TARGET IMAGE: The first image provided.
+                CANDIDATE IMAGES: The subsequent images, labeled A, B, C, D, E...
+                
+                TASK: Look at the TARGET image. Does it appear to be the SAME physical object (e.g. same shelf, same box) as any of the CANDIDATE images?
+                Ignore minor lighting/angle differences.
+                
+                OUTPUT: Return ONLY the JSON: {"match": "A" or "B" or "None", "confidence": 0.0-1.0}
+            """.trimIndent()
+
+            val contentBlock = content {
+                text("TARGET IMAGE:")
+                image(targetBitmap)
+                
+                text("\nCANDIDATE IMAGES:")
+                candidateBitmaps.forEachIndexed { index, pair ->
+                    val label = ('A' + index).toString()
+                    text("\nImage $label (ID: ${pair.first.id}, Name: ${pair.first.name}):")
+                    image(pair.second)
+                }
+                
+                text("\n$prompt")
+            }
+
+            val response = model.generateContent(contentBlock)
+            val jsonStr = extractJson(response.text ?: "")
+            if (jsonStr.isEmpty()) return@withContext null
+            
+            val json = JSONObject(jsonStr)
+            val matchLabel = json.optString("match", "None")
+            val confidence = json.optDouble("confidence", 0.0)
+
+            if (matchLabel != "None" && confidence > 0.7) {
+                val index = matchLabel.firstOrNull()?.minus('A') ?: -1
+                if (index in candidateBitmaps.indices) {
+                    return@withContext candidateBitmaps[index].first.id
+                }
+            }
+            return@withContext null
+
+        } catch (e: Exception) {
+            android.util.Log.e("GeminiService", "Visual match failed", e)
+            return@withContext null
+        }
+    }
+
     private fun extractJson(text: String): String {
-        val start = text.indexOf("{")
-        val end = text.lastIndexOf("}")
-        return if (start != -1 && end != -1 && end > start) {
-            text.substring(start, end + 1)
-        } else ""
+        val pattern = Regex("""\{.*\}""", RegexOption.DOT_MATCHES_ALL)
+        return pattern.find(text)?.value ?: ""
     }
 
     private fun loadBitmap(uri: Uri): Bitmap? {
         return try {
-            val inputStream = context.contentResolver.openInputStream(uri)
-            BitmapFactory.decodeStream(inputStream)
+            val options = BitmapFactory.Options().apply {
+                inJustDecodeBounds = true
+            }
+            context.contentResolver.openInputStream(uri)?.use { 
+                BitmapFactory.decodeStream(it, null, options) 
+            }
+            
+            // Downsample if larger than 1024px to save memory and payload
+            options.inSampleSize = calculateInSampleSize(options, 1024, 1024)
+            options.inJustDecodeBounds = false
+            
+            context.contentResolver.openInputStream(uri)?.use { 
+                BitmapFactory.decodeStream(it, null, options) 
+            }
         } catch (e: Exception) {
+            android.util.Log.e("GeminiService", "Load bitmap failed", e)
             null
         }
+    }
+
+    private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+        val (height: Int, width: Int) = options.outHeight to options.outWidth
+        var inSampleSize = 1
+
+        if (height > reqHeight || width > reqWidth) {
+            val halfHeight: Int = height / 2
+            val halfWidth: Int = width / 2
+            while (halfHeight / inSampleSize >= reqHeight && halfWidth / inSampleSize >= reqWidth) {
+                inSampleSize *= 2
+            }
+        }
+        return inSampleSize
     }
 }

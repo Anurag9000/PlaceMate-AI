@@ -8,7 +8,9 @@ import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.example.placemate.R
 import com.example.placemate.databinding.FragmentOnboardingBinding
+import com.example.placemate.core.utils.ConfigManager
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class OnboardingFragment : Fragment() {
@@ -16,8 +18,8 @@ class OnboardingFragment : Fragment() {
     private var _binding: FragmentOnboardingBinding? = null
     private val binding get() = _binding!!
 
-    @javax.inject.Inject
-    lateinit var configManager: com.example.placemate.core.utils.ConfigManager
+    @Inject
+    lateinit var configManager: ConfigManager
 
     override fun onCreateView(
         inflater: LayoutInflater,

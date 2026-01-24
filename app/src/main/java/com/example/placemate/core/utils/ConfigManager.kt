@@ -25,6 +25,21 @@ class ConfigManager @Inject constructor(
 
     private val standardPrefs = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
 
+    val geminiEnabledFlow: kotlinx.coroutines.flow.Flow<Boolean> = kotlinx.coroutines.flow.callbackFlow {
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
+            if (key == KEY_USE_GEMINI || key == KEY_GEMINI_API_KEY) {
+                trySend(isGeminiEnabled() && hasGeminiApiKey())
+            }
+        }
+        standardPrefs.registerOnSharedPreferenceChangeListener(listener)
+        securePrefs.registerOnSharedPreferenceChangeListener(listener)
+        trySend(isGeminiEnabled() && hasGeminiApiKey())
+        awaitClose { 
+            standardPrefs.unregisterOnSharedPreferenceChangeListener(listener)
+            securePrefs.unregisterOnSharedPreferenceChangeListener(listener)
+        }
+    }
+
     fun saveGeminiApiKey(apiKey: String) {
         securePrefs.edit().putString(KEY_GEMINI_API_KEY, apiKey).apply()
     }

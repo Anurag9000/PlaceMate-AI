@@ -12,6 +12,18 @@ interface InventoryDao {
     @Query("SELECT * FROM items WHERE id = :itemId")
     suspend fun getItemById(itemId: String): ItemEntity?
 
+    @Query("SELECT COUNT(*) FROM items")
+    fun getItemCountFlow(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM items WHERE status = 'TAKEN'")
+    fun getTakenItemCountFlow(): Flow<Int>
+
+    @Query("SELECT * FROM items WHERE status = 'TAKEN' ORDER BY updatedAt DESC")
+    fun getTakenItemsFlow(): Flow<List<ItemEntity>>
+
+    @Query("SELECT * FROM items ORDER BY updatedAt DESC LIMIT 5")
+    fun getRecentItemsFlow(): Flow<List<ItemEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertItem(item: ItemEntity)
 
@@ -46,6 +58,19 @@ interface InventoryDao {
     @Query("SELECT l.* FROM locations l JOIN item_placements p ON l.id = p.locationId WHERE p.itemId = :itemId LIMIT 1")
     suspend fun getLocationForItem(itemId: String): LocationEntity?
 
+    @Query("""
+        SELECT l.*, (SELECT COUNT(DISTINCT itemId) FROM item_placements WHERE locationId = l.id) as itemCount
+        FROM locations l
+        WHERE l.parentId IS :parentId OR (l.parentId IS NULL AND :parentId IS NULL)
+    """)
+    suspend fun getLocationsWithItemCountsSync(parentId: String?): List<LocationWithCount>
+
+    @Query("""
+        SELECT l.*, (SELECT COUNT(DISTINCT itemId) FROM item_placements WHERE locationId = l.id) as itemCount
+        FROM locations l
+    """)
+    fun getAllLocationsWithCountsFlow(): Flow<List<LocationWithCount>>
+
     @Query("SELECT i.* FROM items i JOIN item_placements p ON i.id = p.itemId WHERE p.locationId = :locationId")
     suspend fun getItemsForLocation(locationId: String): List<ItemEntity>
 
@@ -60,6 +85,9 @@ interface InventoryDao {
 
     @Query("SELECT * FROM items")
     suspend fun getAllItemsSync(): List<ItemEntity>
+
+    @Query("DELETE FROM item_placements WHERE itemId = :itemId")
+    suspend fun deletePlacementsForItem(itemId: String)
 }
 
 @Dao

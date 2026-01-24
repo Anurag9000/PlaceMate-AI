@@ -5,9 +5,16 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 interface ItemRecognitionService {
-    suspend fun recognizeItem(imageUri: Uri): RecognitionResult
+    suspend fun recognizeItem(imageUri: Uri, contextHint: String? = null): RecognitionResult
     suspend fun recognizeScene(imageUri: Uri, contextHint: String? = null): SceneRecognitionResult
+    suspend fun findVisualMatch(targetUri: Uri, candidates: List<VisualCandidate>): String?
 }
+
+data class VisualCandidate(
+    val id: String,
+    val name: String,
+    val photoUri: Uri
+)
 
 data class RecognitionResult(
     val suggestedName: String?,
@@ -33,7 +40,7 @@ data class SceneRecognitionResult(
 
 @Singleton
 class StubRecognitionService @Inject constructor() : ItemRecognitionService {
-    override suspend fun recognizeItem(imageUri: Uri): RecognitionResult {
+    override suspend fun recognizeItem(imageUri: Uri, contextHint: String?): RecognitionResult {
         return RecognitionResult(
             suggestedName = "Scanned Item",
             suggestedCategory = "Uncategorized",
@@ -49,5 +56,8 @@ class StubRecognitionService @Inject constructor() : ItemRecognitionService {
                 RecognizedObject("Shelf", true, 0.8f)
             )
         )
+    }
+    override suspend fun findVisualMatch(targetUri: Uri, candidates: List<VisualCandidate>): String? {
+        return null // Stub: No visual matching
     }
 }

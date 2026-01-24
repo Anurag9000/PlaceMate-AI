@@ -34,4 +34,33 @@
     <string name="btn_mark_taken">Mark Taken</string>
     <string name="btn_mark_returned">Mark Returned</string>
     <string name="fab_content_description">AI Assistant</string>
+
+    <!-- Sentinel -->
+    <string name="audit_error_select_room">Please select a room first</string>
+    <string name="audit_status_matched">MATCHED</string>
+    <string name="audit_status_missing">MISSING</string>
+    <string name="audit_status_new">NEW/MOVED</string>
+
+    <string name="hint_find_anything">Find anything anywhere...</string>
+    <string name="label_your_domain">Your Domain</string>
+    <string name="label_ai_powered_status">AI-Powered Inventory Status</string>
+    <string name="label_total_items">Total Items</string>
+    <string name="label_taken_items">Taken Items</string>
+    <string name="label_quick_intelligence">Quick Intelligence</string>
+    <string name="btn_room_scan">Room Scan</string>
+    <string name="btn_manually">Manually</string>
+    <string name="label_ai_engine">AI Engine: %s</string>
+    <string name="desc_upgrade_gemini">Upgrade to Gemini Flash in settings for exhaustive scanning.</string>
+    <string name="label_recent_scans">Recent Scans</string>
+    <string name="default_borrower">Me</string>
+    <string name="label_set_due_date">Set Due Date (Optional)</string>
+    <string name="desc_reminder_active">Multi-use reminder system will be active for this item.</string>
+    <string name="placeholder_not_set">Not Set</string>
+    <string name="btn_edit">Edit</string>
+    <string name="hint_omnisearch">OmniSearch: Text, Voice, Photo...</string>
+    <string name="hint_filter_folder">Filter current folder...</string>
+    <string name="label_home">Home</string>
+    <string name="label_no_items">No items found</string>
+    <string name="btn_save_changes">Save Changes</string>
+    <string name="btn_delete_item">Delete Item</string>
 </resources>

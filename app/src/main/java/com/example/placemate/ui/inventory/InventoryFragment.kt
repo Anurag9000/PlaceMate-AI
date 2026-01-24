@@ -71,9 +71,10 @@ class InventoryFragment : Fragment() {
     ) { success ->
         if (success) {
             photoFile?.let { file ->
-                viewLifecycleOwner.lifecycleScope.launch {
+                    binding.progressBar.visibility = View.VISIBLE
                     val uri = android.net.Uri.fromFile(file)
                     val result = recognitionService.recognizeItem(uri)
+                    binding.progressBar.visibility = View.GONE
 
                     if (result.errorMessage != null) {
                         showErrorDialog("Recognition Error", result.errorMessage)
@@ -93,9 +94,11 @@ class InventoryFragment : Fragment() {
         if (success) {
             photoFile?.let { file ->
                 viewLifecycleOwner.lifecycleScope.launch {
+                    binding.progressBar.visibility = View.VISIBLE
                     val uri = android.net.Uri.fromFile(file)
                     val hint = viewModel.getLocationContextHint()
                     val sceneResult = recognitionService.recognizeScene(uri, hint)
+                    binding.progressBar.visibility = View.GONE
                     
                     if (sceneResult.errorMessage != null) {
                         showErrorDialog("Scan Error", sceneResult.errorMessage)
