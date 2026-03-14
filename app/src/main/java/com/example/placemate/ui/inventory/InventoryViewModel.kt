@@ -150,28 +150,26 @@ class InventoryViewModel @Inject constructor(
                         locationCache.entries.find { it.key.equals(parentLabel, true) }?.value
                     } ?: finalRoomEntity
 
-                    if (parentEntity != null) {
-                        val containerPhotoUri =
-                            container.boundingBox?.let { ImageUtils.cropAndSave(context, imageUri, it) }
-                        val existingEntity = currentLocations.find {
-                            it.name.equals(container.label, true) && it.parentId == parentEntity.id
-                        }
-                        val entity = if (existingEntity != null) {
-                            containerPhotoUri?.let {
-                                repository.updateLocation(existingEntity.copy(photoUri = it.toString()))
-                            }
-                            existingEntity
-                        } else {
-                            repository.addLocationSync(
-                                container.label,
-                                LocationType.STORAGE,
-                                parentEntity.id,
-                                containerPhotoUri?.toString()
-                            )
-                        }
-                        locationCache[container.label] = entity
-                        iterator.remove()
+                    val containerPhotoUri =
+                        container.boundingBox?.let { ImageUtils.cropAndSave(context, imageUri, it) }
+                    val existingEntity = currentLocations.find {
+                        it.name.equals(container.label, true) && it.parentId == parentEntity.id
                     }
+                    val entity = if (existingEntity != null) {
+                        containerPhotoUri?.let {
+                            repository.updateLocation(existingEntity.copy(photoUri = it.toString()))
+                        }
+                        existingEntity
+                    } else {
+                        repository.addLocationSync(
+                            container.label,
+                            LocationType.STORAGE,
+                            parentEntity.id,
+                            containerPhotoUri?.toString()
+                        )
+                    }
+                    locationCache[container.label] = entity
+                    iterator.remove()
                 }
                 passes++
             }
