@@ -1,8 +1,33 @@
+package com.example.placemate.ui.inventory
+
+import android.net.Uri
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.placemate.core.input.InputInterpreter
+import com.example.placemate.core.input.InterpretedIntent
+import com.example.placemate.core.input.ItemRecognitionService
+import com.example.placemate.core.input.SpeechManager
+import com.example.placemate.core.input.SpeechState
+import com.example.placemate.core.input.UserInput
+import com.example.placemate.data.local.entities.ItemEntity
 import com.example.placemate.data.local.entities.LocationEntity
 import com.example.placemate.data.local.entities.LocationType
-import androidx.lifecycle.SavedStateHandle
+import com.example.placemate.data.repository.InventoryRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class AddItemViewModel @Inject constructor(
     private val repository: InventoryRepository,
@@ -12,33 +37,60 @@ class AddItemViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    // Keys for SavedStateHandle
-    private val KEY_NAME = "name"
-    private val KEY_CATEGORY = "category"
-    private val KEY_NOTES = "notes"
-    private val KEY_SELECTED_LOCATION = "selected_location"
-    private val KEY_IMAGE_URI = "image_uri"
+    private companion object {
+        const val KEY_NAME = "name"
+        const val KEY_CATEGORY = "category"
+        const val KEY_NOTES = "notes"
+        const val KEY_SELECTED_LOCATION = "selected_location"
+        const val KEY_IMAGE_URI = "image_uri"
+    }
 
-    // Backing flows from SavedStateHandle
     private val _name = savedStateHandle.getStateFlow(KEY_NAME, "")
     private val _category = savedStateHandle.getStateFlow(KEY_CATEGORY, "")
     private val _notes = savedStateHandle.getStateFlow(KEY_NOTES, "")
     private val _selectedLocationId = savedStateHandle.getStateFlow<String?>(KEY_SELECTED_LOCATION, null)
     private val _imageUriString = savedStateHandle.getStateFlow<String?>(KEY_IMAGE_URI, null)
-    
-    // Derived UI State
-    val uiState: StateFlow<AddItemUiState> = kotlinx.coroutines.flow.combine(
-        _name, _category, _notes, _selectedLocationId, _imageUriString, repository.getAllLocations(), _isSaved
-    ) { name, category, notes, locId, uriStr, locations, saved ->
-        val path = locId?.let { id -> repository.getLocationPath(id) } ?: "Not Set"
-        AddItemUiState(
+    private val _isSaved = MutableStateFlow(false)
+
+    private val locationPathFlow: StateFlow<String> = _selectedLocationId
+        .flatMapLatest { locationId ->
+            if (locationId == null) {
+                flowOf("Not Set")
+            } else {
+                flow { emit(repository.getLocationPath(locationId)) }
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.Lazily, "Not Set")
+
+    private val draftFlow = combine(
+        _name,
+        _category,
+        _notes,
+        _selectedLocationId,
+        _imageUriString
+    ) { name, category, notes, locationId, imageUriString ->
+        AddItemDraft(
             name = name,
             category = category,
             notes = notes,
-            imageUri = uriStr?.let { Uri.parse(it) },
-            selectedLocationId = locId,
-            locationPath = path,
-            isSaved = saved
+            selectedLocationId = locationId,
+            imageUriString = imageUriString
+        )
+    }
+
+    val uiState: StateFlow<AddItemUiState> = combine(
+        draftFlow,
+        locationPathFlow,
+        _isSaved
+    ) { draft, locationPath, isSaved ->
+        AddItemUiState(
+            name = draft.name,
+            category = draft.category,
+            notes = draft.notes,
+            imageUri = draft.imageUriString?.let(Uri::parse),
+            selectedLocationId = draft.selectedLocationId,
+            locationPath = locationPath,
+            isSaved = isSaved
         )
     }.stateIn(viewModelScope, SharingStarted.Lazily, AddItemUiState())
 
@@ -65,30 +117,34 @@ class AddItemViewModel @Inject constructor(
         savedStateHandle[KEY_IMAGE_URI] = uri.toString()
         viewModelScope.launch {
             val result = recognitionService.recognizeItem(uri)
-            // Only auto-fill if empty? Or overwrite? User intent usually overwrite.
-            result.suggestedName?.let { if (_name.value.isEmpty()) savedStateHandle[KEY_NAME] = it }
-            result.suggestedCategory?.let { if (_category.value.isEmpty()) savedStateHandle[KEY_CATEGORY] = it }
+            result.suggestedName?.let {
+                if (_name.value.isBlank()) {
+                    savedStateHandle[KEY_NAME] = it
+                }
+            }
+            result.suggestedCategory?.let {
+                if (_category.value.isBlank()) {
+                    savedStateHandle[KEY_CATEGORY] = it
+                }
+            }
         }
     }
 
     suspend fun resolveLocationPath(path: List<String>): LocationEntity {
         var parentId: String? = null
         var lastLocation: LocationEntity? = null
-        
-        // Cache locations once to avoid O(N*M) DB calls in the loop
         val allExisting = repository.getAllLocationsSync() ?: emptyList()
 
         path.forEachIndexed { index, name ->
             val type = if (index == 0) LocationType.ROOM else LocationType.STORAGE
             val entity = allExisting.find { it.name.equals(name, true) && it.parentId == parentId }
                 ?: repository.addLocationSync(name, type, parentId)
-            
             parentId = entity.id
             lastLocation = entity
         }
-        
-        // Return last or a safe default without infinite recursion
-        return lastLocation ?: allExisting.firstOrNull { it.parentId == null } 
+
+        return lastLocation
+            ?: allExisting.firstOrNull { it.parentId == null }
             ?: repository.addLocationSync("Default Room", LocationType.ROOM, null)
     }
 
@@ -104,42 +160,40 @@ class AddItemViewModel @Inject constructor(
             speechManager.startListening().collect { state ->
                 when (state) {
                     is SpeechState.Result -> {
-                        val intent = inputInterpreter.interpret(UserInput.Speech(state.text))
-                        if (intent is InterpretedIntent.AddItem) {
-                            intent.name?.let { savedStateHandle[KEY_NAME] = it }
-                            intent.category?.let { savedStateHandle[KEY_CATEGORY] = it }
-                            intent.locationPath?.let { setLocationPath(it) }
-                        } else if (intent is InterpretedIntent.AssignLocation) {
-                             setLocationPath(intent.locationPath)
+                        when (val intent = inputInterpreter.interpret(UserInput.Speech(state.text))) {
+                            is InterpretedIntent.AddItem -> {
+                                intent.name?.let { savedStateHandle[KEY_NAME] = it }
+                                intent.category?.let { savedStateHandle[KEY_CATEGORY] = it }
+                                intent.locationPath?.let(::setLocationPath)
+                            }
+                            is InterpretedIntent.AssignLocation -> setLocationPath(intent.locationPath)
+                            else -> Unit
                         }
                     }
-                    else -> { /* Handle other states if needed */ }
+                    else -> Unit
                 }
             }
         }
     }
 
     fun saveItem() {
-        val name = _name.value
-        if (name.isBlank()) return
+        val name = _name.value.trim()
+        if (name.isBlank()) {
+            return
+        }
 
         viewModelScope.launch {
             val newItem = ItemEntity(
                 name = name,
-                category = _category.value,
-                description = _notes.value,
+                category = _category.value.trim(),
+                description = _notes.value.takeIf { it.isNotBlank() },
                 photoUri = _imageUriString.value
             )
             repository.saveItem(newItem, _selectedLocationId.value)
-            // Signal navigation back? We can use a boolean in SavedState or a channel
-            // For MVP simplicity, we can reset or use a dedicated event. 
-            // The previous code had `isSaved`. Let's assume the fragment observes something else or just popBackStack 
-            // We can emit a side-effect, but sticking to state flow:
             _isSaved.value = true
         }
     }
-    
-    private val _isSaved = MutableStateFlow(false)
+
     val isSaved: StateFlow<Boolean> = _isSaved
 }
 
@@ -151,4 +205,12 @@ data class AddItemUiState(
     val selectedLocationId: String? = null,
     val locationPath: String = "Not Set",
     val isSaved: Boolean = false
+)
+
+private data class AddItemDraft(
+    val name: String,
+    val category: String,
+    val notes: String,
+    val selectedLocationId: String?,
+    val imageUriString: String?
 )

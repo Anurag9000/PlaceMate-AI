@@ -47,6 +47,7 @@ class InventoryFragment : Fragment() {
     lateinit var configManager: com.example.placemate.core.utils.ConfigManager
 
     private var photoFile: File? = null
+    private var captureUri: android.net.Uri? = null
     private var pendingIsScene: Boolean = false
 
 
@@ -69,20 +70,17 @@ class InventoryFragment : Fragment() {
     private val takePictureLauncher = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.TakePicture()
     ) { success ->
-        if (success) {
-            photoFile?.let { file ->
-                    binding.progressBar.visibility = View.VISIBLE
-                    val uri = android.net.Uri.fromFile(file)
-                    val result = recognitionService.recognizeItem(uri)
-                    binding.progressBar.visibility = View.GONE
+        val uri = captureUri
+        if (success && uri != null) {
+            viewLifecycleOwner.lifecycleScope.launch {
+                val result = recognitionService.recognizeItem(uri)
 
-                    if (result.errorMessage != null) {
-                        showErrorDialog("Recognition Error", result.errorMessage)
-                    } else if (result.isContainer) {
-                        showContainerDetectionDialog(result)
-                    } else {
-                        handleSingleItemDetection(result)
-                    }
+                if (result.errorMessage != null) {
+                    showErrorDialog("Recognition Error", result.errorMessage)
+                } else if (result.isContainer) {
+                    showContainerDetectionDialog(result)
+                } else {
+                    handleSingleItemDetection(result)
                 }
             }
         }
@@ -91,35 +89,36 @@ class InventoryFragment : Fragment() {
     private val takeScenePictureLauncher = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.TakePicture()
     ) { success ->
-        if (success) {
-            photoFile?.let { file ->
-                viewLifecycleOwner.lifecycleScope.launch {
-                    binding.progressBar.visibility = View.VISIBLE
-                    val uri = android.net.Uri.fromFile(file)
-                    val hint = viewModel.getLocationContextHint()
-                    val sceneResult = recognitionService.recognizeScene(uri, hint)
-                    binding.progressBar.visibility = View.GONE
-                    
-                    if (sceneResult.errorMessage != null) {
-                        showErrorDialog("Scan Error", sceneResult.errorMessage)
-                    } else if (sceneResult.objects.isNotEmpty()) {
-                        viewModel.syncScene(requireContext(), sceneResult, uri)
-                        android.widget.Toast.makeText(requireContext(), 
-                            "Scene scanned! Created Room and found ${sceneResult.objects.count { !it.isContainer }} items.", 
-                            android.widget.Toast.LENGTH_LONG).show()
-                    } else {
-                        // Truly 0 objects found by the AI
-                        android.app.AlertDialog.Builder(requireContext())
-                            .setTitle("No Objects Detected")
-                            .setMessage("The AI couldn't identify specific objects in this photo. Do you want to add this as a generic 'New Room' anyway?")
-                            .setPositiveButton("Add Room") { _, _ ->
-                                viewModel.syncScene(requireContext(), com.example.placemate.core.input.SceneRecognitionResult(
+        val uri = captureUri
+        if (success && uri != null) {
+            viewLifecycleOwner.lifecycleScope.launch {
+                val hint = viewModel.getLocationContextHint()
+                val sceneResult = recognitionService.recognizeScene(uri, hint)
+
+                if (sceneResult.errorMessage != null) {
+                    showErrorDialog("Scan Error", sceneResult.errorMessage)
+                } else if (sceneResult.objects.isNotEmpty()) {
+                    viewModel.syncScene(requireContext(), sceneResult, uri)
+                    android.widget.Toast.makeText(
+                        requireContext(),
+                        "Scene scanned! Created Room and found ${sceneResult.objects.count { !it.isContainer }} items.",
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
+                } else {
+                    android.app.AlertDialog.Builder(requireContext())
+                        .setTitle("No Objects Detected")
+                        .setMessage("The AI couldn't identify specific objects in this photo. Do you want to add this as a generic 'New Room' anyway?")
+                        .setPositiveButton("Add Room") { _, _ ->
+                            viewModel.syncScene(
+                                requireContext(),
+                                com.example.placemate.core.input.SceneRecognitionResult(
                                     listOf(com.example.placemate.core.input.RecognizedObject("New Scanned Room", true, 1.0f))
-                                ), uri)
-                            }
-                            .setNegativeButton("Cancel", null)
-                            .show()
-                    }
+                                ),
+                                uri
+                            )
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
                 }
             }
         }
@@ -281,7 +280,8 @@ class InventoryFragment : Fragment() {
 
     private fun launchCamera(isScene: Boolean) {
         photoFile = ImageUtils.createImageFile(requireContext())
-        val uri = ImageUtils.getContentUri(requireContext(), photoFile!!)
+        captureUri = ImageUtils.getContentUri(requireContext(), photoFile!!)
+        val uri = captureUri ?: return
         
         val engineName = if (configManager.isGeminiEnabled() && configManager.hasGeminiApiKey()) "Gemini" else "ML Kit"
         android.widget.Toast.makeText(requireContext(), "Starting $engineName Scan...", android.widget.Toast.LENGTH_SHORT).show()

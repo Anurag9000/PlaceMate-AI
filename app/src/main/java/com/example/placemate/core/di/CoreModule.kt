@@ -45,6 +45,13 @@ object CoreModule {
             override suspend fun recognizeScene(imageUri: android.net.Uri, contextHint: String?): com.example.placemate.core.input.SceneRecognitionResult {
                 return getActiveService().recognizeScene(imageUri, contextHint)
             }
+
+            override suspend fun findVisualMatch(
+                targetUri: android.net.Uri,
+                candidates: List<com.example.placemate.core.input.VisualCandidate>
+            ): String? {
+                return getActiveService().findVisualMatch(targetUri, candidates)
+            }
         }
     }
 }

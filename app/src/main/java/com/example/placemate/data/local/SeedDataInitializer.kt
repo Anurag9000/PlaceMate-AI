@@ -1,5 +1,6 @@
 package com.example.placemate.data.local
 
+import androidx.room.withTransaction
 import com.example.placemate.data.local.dao.InventoryDao
 import com.example.placemate.data.local.dao.LocationDao
 import com.example.placemate.data.local.entities.ItemEntity
@@ -24,7 +25,7 @@ class SeedDataInitializer @Inject constructor(
             // If we already have ANY data, don't seed again.
             if (itemCount > 0 || locationCount > 0) return@withContext
             
-            androidx.room.withTransaction(database) {
+            database.withTransaction {
                 // Locations with FIXED IDs for idempotency
                 val livingRoom = LocationEntity(id = "seed_living_room", name = "Living Room", type = LocationType.ROOM, parentId = null)
                 val kitchen = LocationEntity(id = "seed_kitchen", name = "Kitchen", type = LocationType.ROOM, parentId = null)

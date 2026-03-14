@@ -32,8 +32,7 @@ class LocationAdapter(
 
         fun bind(item: LocationWithCount) {
             binding.locationName.text = item.location.name
-            binding.locationType.text = item.location.type.name
-            binding.itemCount.text = "${item.itemCount} items"
+            binding.locationType.text = "${item.location.type.name} • ${item.itemCount} items"
             binding.root.setOnClickListener { onItemClick(item) }
             binding.root.setOnLongClickListener {
                 onItemLongClick(item)

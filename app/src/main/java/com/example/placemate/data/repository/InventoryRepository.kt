@@ -1,7 +1,9 @@
 package com.example.placemate.data.repository
 
+import androidx.room.withTransaction
 import com.example.placemate.data.local.dao.InventoryDao
 import com.example.placemate.data.local.dao.LocationDao
+import com.example.placemate.data.local.dao.LocationWithCount
 import com.example.placemate.data.local.entities.ItemEntity
 import com.example.placemate.data.local.entities.LocationEntity
 import com.example.placemate.data.local.entities.LocationType
@@ -43,7 +45,7 @@ class InventoryRepository @Inject constructor(
     }
 
     suspend fun saveItem(item: ItemEntity, locationId: String? = null) {
-        androidx.room.withTransaction(database) {
+        database.withTransaction {
             inventoryDao.insertItem(item)
             locationId?.let {
                 // Enforce single-location rule: Clear previous placements
@@ -91,7 +93,7 @@ class InventoryRepository @Inject constructor(
     }
 
     suspend fun nukeData() {
-        androidx.room.withTransaction(database) {
+        database.withTransaction {
             inventoryDao.deleteAllPlacements()
             inventoryDao.deleteAllItems()
             locationDao.deleteAllLocations()
@@ -102,8 +104,12 @@ class InventoryRepository @Inject constructor(
         return locationDao.getAllLocationsSync()
     }
 
+    suspend fun getAllItemsSync(): List<ItemEntity> {
+        return inventoryDao.getAllItemsSync()
+    }
+
     suspend fun getExplorerContent(parentId: String?): List<ExplorerItem> {
-        val folders = inventoryDao.getLocationsWithItemCounts(parentId).map { locWithCount ->
+        val folders = inventoryDao.getLocationsWithItemCountsSync(parentId).map { locWithCount ->
             ExplorerItem.Folder(locWithCount.location, locWithCount.itemCount)
         }
 
@@ -125,7 +131,7 @@ class InventoryRepository @Inject constructor(
     }
 
     suspend fun markItemAsTaken(item: ItemEntity, borrower: String, dueDate: Long?) {
-        androidx.room.withTransaction(database) {
+        database.withTransaction {
             val updatedItem = item.copy(
                 status = ItemStatus.TAKEN,
                 updatedAt = System.currentTimeMillis()
@@ -143,7 +149,7 @@ class InventoryRepository @Inject constructor(
     }
 
     suspend fun markItemAsReturned(item: ItemEntity) {
-        androidx.room.withTransaction(database) {
+        database.withTransaction {
             val updatedItem = item.copy(
                 status = com.example.placemate.data.local.entities.ItemStatus.PRESENT,
                 updatedAt = System.currentTimeMillis()

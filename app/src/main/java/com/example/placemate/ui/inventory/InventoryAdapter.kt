@@ -8,6 +8,10 @@ import com.example.placemate.data.local.entities.LocationEntity
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class InventoryAdapter(
     private val onItemClick: (ItemEntity) -> Unit,
@@ -78,9 +82,10 @@ class InventoryAdapter(
                 // Async image loading
                 // Use a single-shot load or better yet, recommend Coil/Glide.
                 // For now, using a safer approach tied to the item tag check.
+                binding.itemImage.tag = entity.photoUri
                 binding.itemImage.setImageDrawable(null) // Clear previous
-                kotlinx.coroutines.MainScope().launch {
-                    val bitmap = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                CoroutineScope(Dispatchers.Main).launch {
+                    val bitmap = withContext(Dispatchers.IO) {
                         try {
                             val uri = android.net.Uri.parse(entity.photoUri)
                             binding.root.context.contentResolver.openInputStream(uri).use { 
