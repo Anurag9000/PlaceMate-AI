@@ -1,71 +1,113 @@
-# PlaceMate AI 🏠🤖
+# PlaceMate AI
 
-PlaceMate is a multimodal, AI-powered inventory and location manager. It allows you to organize your home naturally using Vision, Voice, and nested Location hierarchies.
+PlaceMate is a fully native Android app written in Kotlin for Android Studio. It uses Android Views with ViewBinding, MVVM, Hilt, Room, WorkManager, ML Kit, and optional Gemini integration for AI-assisted recognition flows.
 
-## 📖 How to Use
+## Install The APK
 
-### 1. Adding & Removing Items
-- **Add with Photo:** Tap the **(+) FAB** to open the Add Item screen. Click the **Camera Icon** to photograph an object. The AI will identify the item and suggest a category.
-- **Add with Voice:** On the Add Item screen, tap the **Microphone Icon** and say something like *"Add my blue winter coat to the Bedroom Closet"*.
-- **EDITABILITY:** After the AI processes a photo or voice command, **all text fields remain visible and fully editable**. You can manually refine the name, location, or notes before saving.
+Primary handoff APK:
 
-### 2. Multi-Modal Searching (The "Scan" Flow)
-You can find where things are kept using our intelligent search:
+- `releases/PlaceMate-debug.apk`
 
-#### **📸 Scene AI (One-Click Room Scan)**
-- On the **Inventory** screen, tap the **Eye Icon** (Scene Scan) in the search bar.
-- Photograph an **entire room** (e.g., your Kitchen or Living Room).
-- **Spatial Intelligence:** The AI identifies the **Room**, all individual **Shelves/Containers**, and the **Items** sitting on those shelves.
-- **Auto-Hierarchy:** It automatically builds the structure live: `Room > Container > Item`. It uses bounding box geometry to ensure items are placed in the correct shelf exactly as seen in the photo!
-- **🖼️ Cropped Thumbnails:** The app now automatically crops small "object thumbnails" out of the big room photo. Your inventory list now shows exactly what each item looks like, rather than just a blank box!
+Build output copy:
 
-#### **📝 Full Editability & Manual Refinement**
-- **Correct the AI:** All fields (Name, Category, Notes) are now fully editable in the **Item Detail** screen.
-- **Update Photos:** Click the **Camera FAB** on any item to update its photo or add a higher-quality close-up.
-- **Save Changes:** Simply click the **Save Changes** button to lock in your manual refinements.
+- `app/build/outputs/apk/debug/app-debug.apk`
 
-#### **🔍 Visual Search (Single Item/Location)**
-- Tap the **Camera Icon** in the search bar.
-- Photograph a single object or location.
-- **AI Logic:** The app identifies the object/location and filters your inventory to show details or storage contents.
+On an Android phone:
 
-#### **🎙️ Voice Search**
-- Tap the **Microphone Icon** in the search bar.
-- Say the name of an item or a location (e.g., *"Where is my hammer?"* or *"Show me the Kitchen Cabinet"*).
-- **🧠 Semantic Intelligence (Synonyms):** The app understands synonyms. If you say *"Show me the lounge"*, it automatically knows you mean the **"Living Room"** and filters accordingly.
+1. Copy `releases/PlaceMate-debug.apk` to the phone.
+2. Open it from Files/Downloads.
+3. Allow installs from unknown apps for that source if Android prompts.
+4. Launch PlaceMate from the app drawer.
 
----
+## Product Scope
 
-## 🛠️ Data Integrity & Maintenance
-- **Structural Integrity:** The database (Version 2) enforces **Unique Constraints**. Duplicate item names or repeated locations are blocked at the architectural level.
-- **Deterministic Seeding:** No more "Harry Potter x8"—seeding uses fixed IDs to ensure your initial setup is always lean and singular.
-- **Manual Cleanup:** Use the **Red Trash Icon** to wipe all data and start fresh if needed.
+- Splash screen with onboarding gating.
+- Dashboard with item counts, taken-item counts, AI engine status, and recent items.
+- Nested inventory explorer with folder navigation and in-place search.
+- Manual item creation with optional photo and voice assistance.
+- Camera/photo recognition for single items.
+- Scene scan that creates room and storage hierarchies from a captured image.
+- OmniSearch for text, voice, and photo-driven lookup.
+- Item detail editing, photo replacement, deletion, taken/returned state, and due-date handling.
+- Borrowed-items screen.
+- Sentinel audit flow that compares a new scene image against stored contents for a selected location.
+- Settings for Gemini enablement, API key, model selection, prompt customization, and reminder cadence.
 
-## ✨ Semantic Intelligence & Synonyms
-We have implemented a `SynonymManager` that bridges the gap between different ways humans talk:
-- **Locations:** "Kitchen" ↔ "Kitchenette" ↔ "Pantry"
-- **Furniture:** "Couch" ↔ "Sofa" ↔ "Settee"
-- **General:** "Box" ↔ "Container" ↔ "Bin"
+## Stack
 
-This ensures that regardless of whether the AI sees a "Pantry" or you say "Kitchenette," the app correctly resolves to your defined locations.
+- Kotlin
+- Android Views + ViewBinding
+- MVVM
+- Hilt
+- Room
+- DataStore + encrypted shared preferences
+- WorkManager
+- ML Kit
+- Gemini API
 
----
+## Runtime Notes
 
-## 💾 Database Architecture
-PlaceMate is powered by **Android Room (SQLite)**, ensuring your data is stored locally, privately, and reliably.
-- **Relational Mapping:** `ItemEntity` and `LocationEntity` are linked via a placement bridge.
-- **Join Queries:** Our search logic joins these tables, allowing the AI's visual results to instantly list the items within a scanned room.
+- The app stores images through app-scoped `FileProvider` content URIs, not raw filesystem paths.
+- Gemini is optional. The app falls back to the local ML Kit pipeline when Gemini is disabled or no API key is present.
+- Seed data only runs on an empty database.
+- Inventory location edits now preserve existing metadata such as stored photos and creation time.
+- Sentinel audits resolve the target location directly instead of depending on pre-collected UI state.
+- Add Item now preserves typed field values while location changes are made.
+- Recognition services are initialized lazily so non-photo flows do not crash on devices that react badly to eager ML Kit startup.
 
----
+## Host-Side Verification
 
-## 🏗️ Tech Stack
-- **Language:** Kotlin
-- **AI/ML:** Google ML Kit (Computer Vision) & Speech-to-Text
-- **Database:** Room Persistence Library
-- **Architecture:** MVVM + Hilt (DI)
+Verified in this Linux environment:
 
----
+- `./gradlew testDebugUnitTest`
+- `./gradlew assembleDebug`
+- `./gradlew assembleDebugAndroidTest`
+- `./gradlew connectedDebugAndroidTest`
 
-## 🧱 Installation
-1. Clone: `git clone https://github.com/Anurag9000/PlaceMate-AI.git`
-2. Build & Run: `./gradlew assembleDebug` (Min SDK 24).
+Current JVM test coverage includes:
+
+- synonym normalization
+- category mapping and container detection
+- speech intent parsing
+- seed-data initialization
+- inventory single-placement enforcement
+- nested location path resolution
+- location metadata preservation during edits
+- sentinel audit classification logic
+- borrow/return repository side effects
+
+## Hardware Verification Completed
+
+Verified on a connected Vivo 1933 device:
+
+- app install and launch
+- onboarding dismissal / entry to the main app
+- add-item manual save
+- add-item save with hierarchical location creation and final placement persistence
+- item detail mark taken / mark returned
+- item deletion
+- settings persistence
+- inventory clear-all-data confirmation and resulting empty state
+- camera permission request flow from Add Item
+- microphone permission request flow from OmniSearch
+
+Generated artifacts:
+
+- `releases/PlaceMate-debug.apk`
+- `releases/PlaceMate-debug-androidTest.apk`
+- `app/build/outputs/apk/debug/app-debug.apk`
+- `app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk`
+
+## Limits Of This Verification
+
+Not fully verified end to end from this environment:
+
+- real camera capture completion and recognition quality
+- real microphone recognition quality/content
+- Gemini/network-backed recognition behavior
+- Sentinel audit with real scene photos
+- scene-scan with real room photos
+- delayed notification delivery over time
+- every possible OEM-specific edge case
+
+Use `RUNNING.md` for install, run, and focused manual checks for the still-unverified paths.

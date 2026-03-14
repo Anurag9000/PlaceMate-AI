@@ -13,14 +13,19 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import com.example.placemate.data.repository.SettingsRepository
 
+interface ReminderScheduler {
+    fun scheduleReminder(itemId: String)
+    fun cancelReminder(itemId: String)
+}
+
 @Singleton
 class ReminderManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val settingsRepository: SettingsRepository
-) {
+) : ReminderScheduler {
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
-    fun scheduleReminder(itemId: String) {
+    override fun scheduleReminder(itemId: String) {
         scope.launch {
             val interval = settingsRepository.reminderCadenceHours.first()
             val data = workDataOf("itemId" to itemId)
@@ -37,7 +42,7 @@ class ReminderManager @Inject constructor(
         }
     }
 
-    fun cancelReminder(itemId: String) {
+    override fun cancelReminder(itemId: String) {
         WorkManager.getInstance(context).cancelUniqueWork("reminder_$itemId")
     }
 }

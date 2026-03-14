@@ -5,11 +5,14 @@ import com.example.placemate.core.input.StubInputInterpreter
 import com.example.placemate.core.input.MLKitRecognitionService
 import com.example.placemate.core.input.ItemRecognitionService
 import com.example.placemate.core.input.GeminiRecognitionService
+import com.example.placemate.core.notifications.ReminderManager
+import com.example.placemate.core.notifications.ReminderScheduler
 import com.example.placemate.core.utils.ConfigManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import javax.inject.Provider
 import javax.inject.Singleton
 
 @Module
@@ -26,15 +29,15 @@ object CoreModule {
     @Singleton
     fun provideItemRecognitionService(
         configManager: ConfigManager,
-        geminiService: GeminiRecognitionService,
-        mlKitService: MLKitRecognitionService
+        geminiServiceProvider: Provider<GeminiRecognitionService>,
+        mlKitServiceProvider: Provider<MLKitRecognitionService>
     ): ItemRecognitionService {
         return object : ItemRecognitionService {
             private fun getActiveService(): ItemRecognitionService {
                 return if (configManager.isGeminiEnabled() && !configManager.getGeminiApiKey().isNullOrEmpty()) {
-                    geminiService
+                    geminiServiceProvider.get()
                 } else {
-                    mlKitService
+                    mlKitServiceProvider.get()
                 }
             }
 
@@ -54,4 +57,8 @@ object CoreModule {
             }
         }
     }
+
+    @Provides
+    @Singleton
+    fun provideReminderScheduler(reminderManager: ReminderManager): ReminderScheduler = reminderManager
 }

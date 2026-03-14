@@ -72,6 +72,11 @@ class HomeFragment : Fragment() {
                         binding.tvAiEngine.text = "AI Engine: $status"
                     }
                 }
+                launch {
+                    viewModel.recentItems.collect { items ->
+                        adapter.submitList(items)
+                    }
+                }
             }
         }
 

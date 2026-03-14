@@ -15,13 +15,14 @@ import com.example.placemate.data.local.entities.ItemPlacementEntity
 import com.example.placemate.data.local.entities.ItemStatus
 import com.example.placemate.data.local.entities.BorrowEventEntity
 import com.example.placemate.ui.inventory.ExplorerItem
+import com.example.placemate.core.notifications.ReminderScheduler
 
 @Singleton
 class InventoryRepository @Inject constructor(
     private val inventoryDao: InventoryDao,
     private val locationDao: LocationDao,
     private val trackingDao: com.example.placemate.data.local.dao.TrackingDao,
-    private val reminderManager: com.example.placemate.core.notifications.ReminderManager,
+    private val reminderScheduler: ReminderScheduler,
     private val database: com.example.placemate.data.local.AppDatabase
 ) {
     fun getAllItems(): Flow<List<ItemEntity>> = inventoryDao.getAllItems()
@@ -65,12 +66,25 @@ class InventoryRepository @Inject constructor(
 
     suspend fun updateLocation(location: LocationEntity) = locationDao.updateLocation(location)
 
+    suspend fun updateLocationDetails(id: String, name: String, type: LocationType, parentId: String?) {
+        val existing = locationDao.getLocationById(id) ?: return
+        locationDao.updateLocation(
+            existing.copy(
+                name = name,
+                type = type,
+                parentId = parentId
+            )
+        )
+    }
+
     suspend fun getLocationPathForItem(itemId: String): String {
         val location = inventoryDao.getLocationForItem(itemId) ?: return "Root"
         return getLocationPath(location.id)
     }
 
     suspend fun getLocationForItem(itemId: String): LocationEntity? = inventoryDao.getLocationForItem(itemId)
+
+    suspend fun getLocationById(locationId: String): LocationEntity? = locationDao.getLocationById(locationId)
 
     suspend fun getLocationPath(locationId: String): String {
         val path = mutableListOf<String>()
@@ -144,7 +158,7 @@ class InventoryRepository @Inject constructor(
                 dueAt = dueDate
             )
             trackingDao.insertBorrowEvent(event)
-            reminderManager.scheduleReminder(item.id)
+            reminderScheduler.scheduleReminder(item.id)
         }
     }
 
@@ -161,7 +175,7 @@ class InventoryRepository @Inject constructor(
                 val updatedEvent = it.copy(returnedAt = System.currentTimeMillis())
                 trackingDao.updateBorrowEvent(updatedEvent)
             }
-            reminderManager.cancelReminder(item.id)
+            reminderScheduler.cancelReminder(item.id)
         }
     }
 }

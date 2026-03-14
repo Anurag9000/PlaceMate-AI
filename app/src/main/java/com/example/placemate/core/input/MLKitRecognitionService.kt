@@ -22,14 +22,19 @@ class MLKitRecognitionService @Inject constructor(
     private val categoryManager: com.example.placemate.core.utils.CategoryManager
 ) : ItemRecognitionService {
 
-    private val labeler = ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS)
-    private val objectDetector = ObjectDetection.getClient(
-        ObjectDetectorOptions.Builder()
-            .setDetectorMode(ObjectDetectorOptions.SINGLE_IMAGE_MODE)
-            .enableMultipleObjects()
-            .enableClassification()
-            .build()
-    )
+    // Defer ML Kit client construction until a recognition path actually needs it.
+    private val labeler by lazy(LazyThreadSafetyMode.NONE) {
+        ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS)
+    }
+    private val objectDetector by lazy(LazyThreadSafetyMode.NONE) {
+        ObjectDetection.getClient(
+            ObjectDetectorOptions.Builder()
+                .setDetectorMode(ObjectDetectorOptions.SINGLE_IMAGE_MODE)
+                .enableMultipleObjects()
+                .enableClassification()
+                .build()
+        )
+    }
 
     private val genericLabels = setOf("home good", "furniture", "building", "rectangle", "shape", "material", "object", "product")
 

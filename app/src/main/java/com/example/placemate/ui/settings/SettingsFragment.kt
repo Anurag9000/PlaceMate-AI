@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
@@ -47,6 +48,20 @@ class SettingsFragment : Fragment() {
             viewModel.onCadenceChanged(value.toInt())
         }
 
+        binding.editApiKey.doAfterTextChanged { editable ->
+            val value = editable?.toString().orEmpty()
+            if (viewModel.uiState.value.apiKey != value) {
+                viewModel.onApiKeyChanged(value)
+            }
+        }
+
+        binding.editCustomPrompt.doAfterTextChanged { editable ->
+            val value = editable?.toString().orEmpty()
+            if (viewModel.uiState.value.customPrompt != value) {
+                viewModel.onPromptChanged(value)
+            }
+        }
+
         binding.switchUseGemini.setOnCheckedChangeListener { _, isChecked ->
             viewModel.onUseGeminiChanged(isChecked)
         }
@@ -56,8 +71,6 @@ class SettingsFragment : Fragment() {
         }
 
         binding.btnSaveSettings.setOnClickListener {
-            viewModel.onApiKeyChanged(binding.editApiKey.text.toString())
-            viewModel.onPromptChanged(binding.editCustomPrompt.text.toString())
             val selectedModel = binding.spinnerGeminiModel.selectedItem?.toString() ?: ""
             viewModel.onModelSelected(selectedModel)
             viewModel.saveSettings()

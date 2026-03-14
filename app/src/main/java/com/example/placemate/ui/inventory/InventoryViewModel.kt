@@ -263,14 +263,7 @@ class InventoryViewModel @Inject constructor(
 
     fun updateLocation(id: String, name: String, type: LocationType, parentId: String?) {
         viewModelScope.launch {
-            repository.updateLocation(
-                LocationEntity(
-                    id = id,
-                    name = name,
-                    type = type,
-                    parentId = parentId
-                )
-            )
+            repository.updateLocationDetails(id, name, type, parentId)
             refreshExplorer()
         }
     }

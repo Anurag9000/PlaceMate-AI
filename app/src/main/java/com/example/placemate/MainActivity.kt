@@ -46,14 +46,25 @@ class MainActivity : AppCompatActivity() {
             val bottomNav = binding.appBarMain.contentMain.bottomNavView
             bottomNav?.setupWithNavController(navController)
 
+            val bottomNavDestinations = setOf(
+                R.id.nav_home,
+                R.id.nav_inventory,
+                R.id.nav_taken_items,
+                R.id.nav_sentinel
+            )
+
             navController.addOnDestinationChangedListener { _, destination, _ ->
                 when (destination.id) {
                     R.id.nav_splash, R.id.nav_onboarding -> {
                         bottomNav?.visibility = android.view.View.GONE
                         supportActionBar?.hide()
                     }
-                    else -> {
+                    in bottomNavDestinations -> {
                         bottomNav?.visibility = android.view.View.VISIBLE
+                        supportActionBar?.show()
+                    }
+                    else -> {
+                        bottomNav?.visibility = android.view.View.GONE
                         supportActionBar?.show()
                     }
                 }

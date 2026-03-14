@@ -201,11 +201,13 @@ class InventoryFragment : Fragment() {
                 // Collect Explorer State
                 launch {
                     viewModel.explorerItems.collect { items ->
-                        // If no items in explorer (and not searching?), show empty state?
-                        if (binding.searchEditText.text.isNullOrEmpty()) {
-                           adapter.submitList(items)
-                           binding.tvEmptyState.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
-                           binding.tvEmptyState.text = if (viewModel.currentLocationId.value == null) "No items yet. Scan something!" else "This location is empty."
+                        adapter.submitList(items)
+                        val isSearching = !binding.searchEditText.text.isNullOrEmpty()
+                        binding.tvEmptyState.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
+                        binding.tvEmptyState.text = when {
+                            isSearching -> "No matches found."
+                            viewModel.currentLocationId.value == null -> "No items yet. Scan something!"
+                            else -> "This location is empty."
                         }
                     }
                 }

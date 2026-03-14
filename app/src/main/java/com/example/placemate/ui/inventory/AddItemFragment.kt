@@ -10,6 +10,7 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
@@ -74,14 +75,23 @@ class AddItemFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.nameEditText.setOnFocusChangeListener { _, hasFocus ->
-            if (!hasFocus) viewModel.onNameChanged(binding.nameEditText.text.toString())
+        binding.nameEditText.doAfterTextChanged { text ->
+            val latest = text?.toString().orEmpty()
+            if (latest != viewModel.uiState.value.name) {
+                viewModel.onNameChanged(latest)
+            }
         }
-        binding.categoryEditText.setOnFocusChangeListener { _, hasFocus ->
-            if (!hasFocus) viewModel.onCategoryChanged(binding.categoryEditText.text.toString())
+        binding.categoryEditText.doAfterTextChanged { text ->
+            val latest = text?.toString().orEmpty()
+            if (latest != viewModel.uiState.value.category) {
+                viewModel.onCategoryChanged(latest)
+            }
         }
-        binding.notesEditText.setOnFocusChangeListener { _, hasFocus ->
-            if (!hasFocus) viewModel.onNotesChanged(binding.notesEditText.text.toString())
+        binding.notesEditText.doAfterTextChanged { text ->
+            val latest = text?.toString().orEmpty()
+            if (latest != viewModel.uiState.value.notes) {
+                viewModel.onNotesChanged(latest)
+            }
         }
 
         binding.btnSpeechName.setOnClickListener {

@@ -54,47 +54,14 @@ class SentinelViewModel @Inject constructor(
                 val dbItems = repository.getItemsForLocation(targetLocationId)
                 
                 // 2. Perform AI Recognition
-                val targetLoc = locations.value.find { it.id == targetLocationId }
+                val targetLoc = repository.getLocationById(targetLocationId)
                 val sceneResult = recognitionService.recognizeScene(imageUri, targetLoc?.name)
                 
                 if (sceneResult.errorMessage != null) {
                     _error.update { sceneResult.errorMessage }
                     _auditResults.update { emptyList() }
                 } else {
-                    // 3. Compare AI results with DB using normalized matching
-                    val aiLabels = sceneResult.objects.map { it.label.lowercase().trim() }
-                    
-                    val results = mutableListOf<AuditItem>()
-                    
-                    // Check for MATCHED and MISSING
-                    dbItems.forEach { item ->
-                        val nameLower = item.name.lowercase().trim()
-                        val matched = aiLabels.any { aiLabel ->
-                            aiLabel == nameLower || aiLabel.contains(nameLower) || nameLower.contains(aiLabel)
-                        }
-                        
-                        if (matched) {
-                            results.add(AuditItem(item.id, item.name, AuditStatus.MATCHED, item.photoUri))
-                        } else {
-                            results.add(AuditItem(item.id, item.name, AuditStatus.MISSING, item.photoUri))
-                        }
-                    }
-                    
-                    // Check for NEW (found by AI but NOT in DB for this room)
-                    val dbItemNames = dbItems.map { it.name.lowercase().trim() }
-                    sceneResult.objects.forEach { obj ->
-                        if (!obj.isContainer) {
-                            val labelLower = obj.label.lowercase().trim()
-                            val existsInDb = dbItemNames.any { dbName ->
-                                dbName == labelLower || dbName.contains(labelLower) || labelLower.contains(dbName)
-                            }
-                            if (!existsInDb) {
-                                results.add(AuditItem("new_${obj.label}", obj.label, AuditStatus.NEW, null))
-                            }
-                        }
-                    }
-                    
-                    _auditResults.update { results.sortedBy { it.status } }
+                    _auditResults.update { buildAuditResults(dbItems, sceneResult) }
                 }
             } catch (e: Exception) {
                 _error.update { e.localizedMessage ?: "Unknown audit error" }
@@ -107,5 +74,41 @@ class SentinelViewModel @Inject constructor(
     
     fun clearError() {
         _error.update { null }
+    }
+
+    internal fun buildAuditResults(
+        dbItems: List<com.example.placemate.data.local.entities.ItemEntity>,
+        sceneResult: com.example.placemate.core.input.SceneRecognitionResult
+    ): List<AuditItem> {
+        val aiLabels = sceneResult.objects.map { it.label.lowercase().trim() }
+        val results = mutableListOf<AuditItem>()
+
+        dbItems.forEach { item ->
+            val nameLower = item.name.lowercase().trim()
+            val matched = aiLabels.any { aiLabel ->
+                aiLabel == nameLower || aiLabel.contains(nameLower) || nameLower.contains(aiLabel)
+            }
+
+            results += if (matched) {
+                AuditItem(item.id, item.name, AuditStatus.MATCHED, item.photoUri)
+            } else {
+                AuditItem(item.id, item.name, AuditStatus.MISSING, item.photoUri)
+            }
+        }
+
+        val dbItemNames = dbItems.map { it.name.lowercase().trim() }
+        sceneResult.objects.forEach { obj ->
+            if (!obj.isContainer) {
+                val labelLower = obj.label.lowercase().trim()
+                val existsInDb = dbItemNames.any { dbName ->
+                    dbName == labelLower || dbName.contains(labelLower) || labelLower.contains(dbName)
+                }
+                if (!existsInDb) {
+                    results += AuditItem("new_${obj.label}", obj.label, AuditStatus.NEW, null)
+                }
+            }
+        }
+
+        return results.sortedBy { it.status }
     }
 }

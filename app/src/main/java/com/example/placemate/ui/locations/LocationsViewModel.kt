@@ -37,13 +37,7 @@ class LocationsViewModel @Inject constructor(
 
     fun updateLocation(id: String, name: String, type: LocationType, parentId: String?) {
         viewModelScope.launch {
-            val updated = LocationEntity(
-                id = id,
-                name = name,
-                type = type,
-                parentId = parentId
-            )
-            repository.updateLocation(updated)
+            repository.updateLocationDetails(id, name, type, parentId)
         }
     }
 
