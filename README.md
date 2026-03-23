@@ -45,6 +45,10 @@ On an Android phone:
 - ML Kit
 - Gemini API
 
+## Architecture
+
+![PlaceMate-AI Architecture](docs/architecture.png)
+
 ## Runtime Notes
 
 - The app stores images through app-scoped `FileProvider` content URIs, not raw filesystem paths.
