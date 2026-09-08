@@ -2,7 +2,7 @@
 from __future__ import annotations
 import hashlib,os,subprocess,sys,urllib.request
 from pathlib import Path
-R="Anurag9000/PlaceMate-AI";B="4e99dc764b8d8b02eab5506916c1a59fa1e36823";S="adabcd5f317297e99707a8a38341cc0c6d6ebbc5";AC="f899ac190085228cc95f47725a36bfd105822374";AS="82a10e0a6e221dbf90de92d56a8b87d0f270935f";D=Path(__file__).resolve().parent;U=f"https://raw.githubusercontent.com/Anurag9000/RigorousRAG/{AC}/tools/repo_training_launcher_adapter.py"
+R="Anurag9000/PlaceMate-AI";B="4e99dc764b8d8b02eab5506916c1a59fa1e36823";S="adabcd5f317297e99707a8a38341cc0c6d6ebbc5";AC="04e875505372d70711709042e4322384f6ded9d6";AS="ec384d937fb75f5bf1ff257d135c3f28001c29cd";D=Path(__file__).resolve().parent;U=f"https://raw.githubusercontent.com/Anurag9000/RigorousRAG/{AC}/tools/repo_training_launcher_adapter.py"
 def h(x):return hashlib.sha1(f"blob {len(x)}\0".encode()+x).hexdigest()
 def main():
  p=D/".training_control"/"repo_training_launcher_adapter.py"
